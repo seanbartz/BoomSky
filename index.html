@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BoomSky</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">BoomSky</p>
+          <h1>Bluesky with spoiler control</h1>
+          <p class="subtitle">
+            Check in on your Pacers watch status before pulling in your timeline, so you
+            can avoid spoilers when you&apos;re behind.
+          </p>
+        </div>
+        <div class="hero-card">
+          <p class="label">Pacers spoiler shield</p>
+          <p class="hero-value">Active when you&apos;re not caught up</p>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="card">
+          <h2>Sign in to Bluesky</h2>
+          <p class="muted">
+            Use an app password from your Bluesky account settings. We only use it to
+            fetch your timeline in this session.
+          </p>
+          <form id="credentials-form">
+            <label class="field">
+              <span>Handle</span>
+              <input
+                type="text"
+                name="handle"
+                placeholder="you.bsky.social"
+                autocomplete="username"
+                required
+              />
+            </label>
+            <label class="field">
+              <span>App password</span>
+              <input
+                type="password"
+                name="appPassword"
+                placeholder="xxxx-xxxx-xxxx-xxxx"
+                autocomplete="current-password"
+                required
+              />
+            </label>
+            <label class="field">
+              <span>Timeline posts to fetch</span>
+              <input type="number" name="limit" min="5" max="100" value="30" />
+            </label>
+
+            <fieldset class="field">
+              <legend>Are you up-to-date on Pacers games?</legend>
+              <div class="radio-row">
+                <label class="radio">
+                  <input type="radio" name="caughtUp" value="yes" />
+                  <span>Yes, I&apos;m caught up</span>
+                </label>
+                <label class="radio">
+                  <input type="radio" name="caughtUp" value="no" checked />
+                  <span>No, hide spoilers</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <button type="submit" class="primary">Load timeline</button>
+          </form>
+          <p class="footnote">
+            Tip: if Bluesky&apos;s API blocks browser requests, run this page from a local
+            static server (e.g. <code>python3 -m http.server</code>).
+          </p>
+        </section>
+
+        <section class="card timeline">
+          <div class="timeline-header">
+            <h2>Your timeline</h2>
+            <span id="status-pill" class="pill">Waiting for sign-in</span>
+          </div>
+          <div id="timeline" class="timeline-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <template id="post-template">
+      <article class="post">
+        <div class="post-meta">
+          <div>
+            <p class="post-author"></p>
+            <p class="post-handle"></p>
+          </div>
+          <time class="post-date"></time>
+        </div>
+        <p class="post-text"></p>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
