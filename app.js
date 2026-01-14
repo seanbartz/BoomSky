@@ -40,6 +40,7 @@ const form = document.getElementById("credentials-form");
 const timeline = document.getElementById("timeline");
 const statusPill = document.getElementById("status-pill");
 const postTemplate = document.getElementById("post-template");
+let currentHandle = "";
 
 const setStatus = (text) => {
   statusPill.textContent = text;
@@ -415,11 +416,28 @@ const fetchTimeline = async (token, limit) => {
 };
 
 const filterTimeline = (feed, hidePacers) => {
+  const shouldIncludeReply = (item) => {
+    if (!item.reply?.parent) {
+      return true;
+    }
+    const parentAuthor = item.reply.parent.author;
+    if (!parentAuthor) {
+      return true;
+    }
+    if (parentAuthor.handle && parentAuthor.handle === currentHandle) {
+      return true;
+    }
+    return parentAuthor.viewer?.following === true;
+  };
+
   if (!hidePacers) {
-    return feed;
+    return feed.filter(shouldIncludeReply);
   }
 
   return feed.filter((item) => {
+    if (!shouldIncludeReply(item)) {
+      return false;
+    }
     const text = item.post?.record?.text || "";
     return !containsPacersSpoiler(text);
   });
@@ -443,6 +461,7 @@ form.addEventListener("submit", async (event) => {
   }
 
   try {
+    currentHandle = handle;
     const token = await createSession(handle, appPassword);
     const feed = await fetchTimeline(token, limit);
     const filtered = filterTimeline(feed, !caughtUp);
