@@ -397,7 +397,7 @@ const createSession = async (handle, appPassword) => {
   }
 
   const payload = await response.json();
-  return payload.accessJwt;
+  return payload;
 };
 
 const fetchTimeline = async (token, limit) => {
@@ -413,6 +413,39 @@ const fetchTimeline = async (token, limit) => {
 
   const payload = await response.json();
   return payload.feed || [];
+};
+
+const createRecord = async (collection, record) => {
+  if (!currentToken || !currentSession?.did) {
+    throw new Error("Please sign in before posting or reacting.");
+  }
+  const response = await fetch(`${API_BASE}/com.atproto.repo.createRecord`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${currentToken}`,
+    },
+    body: JSON.stringify({
+      repo: currentSession.did,
+      collection,
+      record,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to update the timeline. Please try again.");
+  }
+
+  return response.json();
+};
+
+const refreshTimeline = async (limit, hidePacers) => {
+  if (!currentToken) {
+    return;
+  }
+  const feed = await fetchTimeline(currentToken, limit);
+  const filtered = filterTimeline(feed, hidePacers);
+  renderPosts(filtered);
 };
 
 const filterTimeline = (feed, hidePacers) => {
@@ -442,6 +475,88 @@ const filterTimeline = (feed, hidePacers) => {
     return !containsPacersSpoiler(text);
   });
 };
+
+timeline.addEventListener("click", async (event) => {
+  const actionButton = event.target.closest(".post-action");
+  if (!actionButton) {
+    return;
+  }
+
+  const postElement = actionButton.closest(".post");
+  if (!postElement) {
+    return;
+  }
+
+  const uri = postElement.dataset.uri;
+  const cid = postElement.dataset.cid;
+
+  try {
+    if (actionButton.dataset.action === "share") {
+      if (uri) {
+        await navigator.clipboard.writeText(uri);
+        setStatus("Post link copied!");
+      }
+      return;
+    }
+
+    if (actionButton.dataset.action === "like") {
+      await createRecord("app.bsky.feed.like", {
+        subject: { uri, cid },
+        createdAt: new Date().toISOString(),
+      });
+      setStatus("Liked!");
+    }
+
+    if (actionButton.dataset.action === "repost") {
+      await createRecord("app.bsky.feed.repost", {
+        subject: { uri, cid },
+        createdAt: new Date().toISOString(),
+      });
+      setStatus("Reposted!");
+    }
+
+    if (actionButton.dataset.action === "reply") {
+      const replyText = window.prompt("Reply:", "");
+      if (!replyText) {
+        return;
+      }
+      await createRecord("app.bsky.feed.post", {
+        text: replyText,
+        reply: {
+          root: { uri, cid },
+          parent: { uri, cid },
+        },
+        createdAt: new Date().toISOString(),
+      });
+      setStatus("Reply posted!");
+    }
+  } catch (error) {
+    showError(error.message);
+  }
+});
+
+composerForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(composerForm);
+  const text = formData.get("postText").trim();
+  if (!text) {
+    return;
+  }
+
+  try {
+    await createRecord("app.bsky.feed.post", {
+      text,
+      createdAt: new Date().toISOString(),
+    });
+    composerForm.reset();
+    setStatus("Posted!");
+    const limit = Number(form.querySelector('input[name="limit"]').value) || 30;
+    const caughtUp = form.querySelector('input[name="caughtUp"][value="yes"]').checked;
+    await refreshTimeline(limit, !caughtUp);
+  } catch (error) {
+    showError(error.message);
+  }
+});
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
