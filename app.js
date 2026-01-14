@@ -135,8 +135,7 @@ const filterTimeline = (feed, hidePacers) => {
 
   return feed.filter((item) => {
     const text = item.post?.record?.text || "";
-    const handle = item.post?.author?.handle || "";
-    return !containsPacersSpoiler(text) && !PACERS_BLOCKED_HANDLES.has(handle);
+    return !containsPacersSpoiler(text);
   });
 };
 
