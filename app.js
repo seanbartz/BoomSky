@@ -40,10 +40,7 @@ const form = document.getElementById("credentials-form");
 const timeline = document.getElementById("timeline");
 const statusPill = document.getElementById("status-pill");
 const postTemplate = document.getElementById("post-template");
-const composerForm = document.getElementById("composer-form");
 let currentHandle = "";
-let currentSession = null;
-let currentToken = "";
 
 const setStatus = (text) => {
   statusPill.textContent = text;
@@ -379,10 +376,6 @@ const renderPosts = (posts) => {
     const embedContainer = clone.querySelector(".post-embed");
     renderEmbed(post.embed, embedContainer);
 
-    const postElement = clone.querySelector(".post");
-    postElement.dataset.uri = post.uri || "";
-    postElement.dataset.cid = post.cid || "";
-
     timeline.appendChild(clone);
   });
 };
@@ -584,9 +577,8 @@ form.addEventListener("submit", async (event) => {
 
   try {
     currentHandle = handle;
-    currentSession = await createSession(handle, appPassword);
-    currentToken = currentSession.accessJwt;
-    const feed = await fetchTimeline(currentToken, limit);
+    const token = await createSession(handle, appPassword);
+    const feed = await fetchTimeline(token, limit);
     const filtered = filterTimeline(feed, !caughtUp);
     renderPosts(filtered);
     setStatus(caughtUp ? "Showing all posts" : "Spoilers hidden");

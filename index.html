@@ -59,27 +59,16 @@
               <div>
                 <h2>What&apos;s happening?</h2>
                 <p class="muted">
-                  Write a post, then like, reply, or repost directly from your timeline.
+                  Preview your timeline with spoiler filters, media previews, and
+                  embedded article cards.
                 </p>
               </div>
             </div>
-            <form id="composer-form">
-              <label class="field">
-                <span>New post</span>
-                <textarea
-                  name="postText"
-                  rows="4"
-                  placeholder="Share an update..."
-                  required
-                ></textarea>
-              </label>
-              <div class="composer-actions">
-                <button class="ghost" type="button" disabled>Add photo</button>
-                <button class="ghost" type="button" disabled>Add link</button>
-                <button class="ghost" type="button" disabled>Spoiler tags</button>
-                <button class="primary" type="submit">Post</button>
-              </div>
-            </form>
+            <div class="composer-actions">
+              <button class="ghost">Add photo</button>
+              <button class="ghost">Add link</button>
+              <button class="ghost">Spoiler tags</button>
+            </div>
           </section>
 
           <section class="card timeline">
@@ -181,10 +170,10 @@
           <div class="post-text"></div>
           <div class="post-embed"></div>
           <div class="post-actions">
-            <button class="post-action" type="button" data-action="reply">💬 Reply</button>
-            <button class="post-action" type="button" data-action="repost">🔁 Repost</button>
-            <button class="post-action" type="button" data-action="like">❤️ Like</button>
-            <button class="post-action" type="button" data-action="share">↗️ Share</button>
+            <span>💬 Reply</span>
+            <span>🔁 Repost</span>
+            <span>❤️ Like</span>
+            <span>↗️ Share</span>
           </div>
         </div>
       </article>
