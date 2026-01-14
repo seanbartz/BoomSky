@@ -207,25 +207,6 @@ input:focus {
   margin-bottom: 10px;
 }
 
-.post-author-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.post-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #fff;
-  box-shadow: 0 8px 20px rgba(30, 40, 70, 0.12);
-}
-
-.post-avatar.is-hidden {
-  display: none;
-}
-
 .post-author {
   font-weight: 600;
 }
@@ -239,18 +220,6 @@ input:focus {
 .post-text {
   white-space: pre-wrap;
   line-height: 1.5;
-}
-
-.post-text a,
-.post-handle a {
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.post-text a:hover,
-.post-handle a:hover {
-  text-decoration: underline;
 }
 
 .empty {

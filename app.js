@@ -58,29 +58,6 @@ const showEmpty = (message) => {
   timeline.appendChild(empty);
 };
 
-const escapeHTML = (value) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
-const linkifyText = (text) => {
-  const escaped = escapeHTML(text);
-  const urlRegex = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/g;
-  const handleRegex = /(^|\\s)@([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/g;
-
-  return escaped
-    .replace(urlRegex, (match) => {
-      const href = match.startsWith("http") ? match : `https://${match}`;
-      return `<a href="${href}" target="_blank" rel="noopener noreferrer">${match}</a>`;
-    })
-    .replace(handleRegex, (match, prefix, handle) => {
-      return `${prefix}<a href="https://bsky.app/profile/${handle}" target="_blank" rel="noopener noreferrer">@${handle}</a>`;
-    });
-};
-
 const containsPacersSpoiler = (text) => {
   const lowered = text.toLowerCase();
   return PACERS_KEYWORDS.some((keyword) => lowered.includes(keyword));
@@ -106,21 +83,11 @@ const renderPosts = (posts) => {
     const record = post.record || {};
     const author = post.author || {};
     const clone = postTemplate.content.cloneNode(true);
-    const avatar = clone.querySelector(".post-avatar");
 
     clone.querySelector(".post-author").textContent = author.displayName || "Unknown";
-    clone.querySelector(".post-handle").innerHTML = author.handle
-      ? `<a href="https://bsky.app/profile/${author.handle}" target="_blank" rel="noopener noreferrer">@${author.handle}</a>`
-      : "@unknown";
+    clone.querySelector(".post-handle").textContent = `@${author.handle || "unknown"}`;
     clone.querySelector(".post-date").textContent = formatDate(record.createdAt);
-    clone.querySelector(".post-text").innerHTML = linkifyText(record.text || "");
-
-    if (author.avatar) {
-      avatar.src = author.avatar;
-      avatar.alt = `${author.displayName || author.handle || "Author"} avatar`;
-    } else {
-      avatar.classList.add("is-hidden");
-    }
+    clone.querySelector(".post-text").textContent = record.text || "";
 
     timeline.appendChild(clone);
   });
@@ -168,8 +135,7 @@ const filterTimeline = (feed, hidePacers) => {
 
   return feed.filter((item) => {
     const text = item.post?.record?.text || "";
-    const handle = item.post?.author?.handle || "";
-    return !containsPacersSpoiler(text) && !PACERS_BLOCKED_HANDLES.has(handle);
+    return !containsPacersSpoiler(text);
   });
 };
 
