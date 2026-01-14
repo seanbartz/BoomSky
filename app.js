@@ -319,13 +319,29 @@ const renderQuotedPost = (record, container) => {
   container.appendChild(quoteCard);
 };
 
+const extractQuotedRecord = (embed) => {
+  if (!embed) {
+    return null;
+  }
+
+  if (embed.$type?.includes("recordWithMedia")) {
+    return embed.record?.record || embed.record || null;
+  }
+
+  if (embed.$type?.includes("record")) {
+    return embed.record || embed.record?.record || null;
+  }
+
+  return null;
+};
+
 const renderEmbed = (embed, container) => {
   if (!embed) {
     return;
   }
   const images = embed.images || embed.media?.images;
   const external = embed.external || embed.record?.external;
-  const record = embed.record?.record || embed.record;
+  const record = extractQuotedRecord(embed);
 
   renderImages(images, container);
   renderExternalCard(external, container);
