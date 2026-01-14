@@ -236,15 +236,100 @@ const renderExternalCard = (external, container) => {
   container.appendChild(card);
 };
 
+const buildPostUrl = (record) => {
+  const handle = record?.author?.handle;
+  const uri = record?.uri;
+  if (!handle || !uri) {
+    return null;
+  }
+  const rkey = uri.split("/").pop();
+  if (!rkey) {
+    return null;
+  }
+  return `https://bsky.app/profile/${handle}/post/${rkey}`;
+};
+
+const renderQuotedPost = (record, container) => {
+  if (!record) {
+    return;
+  }
+
+  if (record.$type?.includes("viewNotFound")) {
+    const missing = document.createElement("div");
+    missing.className = "quote-card quote-unavailable";
+    missing.textContent = "Quoted post unavailable.";
+    container.appendChild(missing);
+    return;
+  }
+
+  if (record.$type?.includes("viewBlocked")) {
+    const blocked = document.createElement("div");
+    blocked.className = "quote-card quote-unavailable";
+    blocked.textContent = "Quoted post blocked.";
+    container.appendChild(blocked);
+    return;
+  }
+
+  const cardTag = buildPostUrl(record) ? "a" : "div";
+  const quoteCard = document.createElement(cardTag);
+  quoteCard.className = "quote-card";
+  if (cardTag === "a") {
+    quoteCard.href = buildPostUrl(record);
+    quoteCard.target = "_blank";
+    quoteCard.rel = "noopener noreferrer";
+  }
+
+  const meta = document.createElement("div");
+  meta.className = "quote-meta";
+  const avatar = document.createElement("img");
+  avatar.className = "quote-avatar";
+  avatar.src = record.author?.avatar || DEFAULT_AVATAR;
+  avatar.alt = record.author?.displayName || record.author?.handle || "User avatar";
+  const author = document.createElement("div");
+  author.className = "quote-author";
+  author.textContent = record.author?.displayName || "Unknown";
+  const handle = document.createElement("span");
+  handle.className = "quote-handle";
+  handle.textContent = record.author?.handle ? `@${record.author.handle}` : "@unknown";
+  const date = document.createElement("span");
+  date.className = "quote-date";
+  date.textContent = formatDate(record.value?.createdAt);
+
+  meta.appendChild(avatar);
+  meta.appendChild(author);
+  meta.appendChild(handle);
+  meta.appendChild(date);
+
+  const text = document.createElement("div");
+  text.className = "quote-text";
+  renderPostText(text, record.value?.text || "", record.value?.facets || []);
+
+  quoteCard.appendChild(meta);
+  if (record.value?.text) {
+    quoteCard.appendChild(text);
+  }
+
+  if (record.embeds?.length) {
+    const nested = document.createElement("div");
+    nested.className = "quote-embed";
+    renderEmbed(record.embeds[0], nested);
+    quoteCard.appendChild(nested);
+  }
+
+  container.appendChild(quoteCard);
+};
+
 const renderEmbed = (embed, container) => {
   if (!embed) {
     return;
   }
   const images = embed.images || embed.media?.images;
   const external = embed.external || embed.record?.external;
+  const record = embed.record?.record || embed.record;
 
   renderImages(images, container);
   renderExternalCard(external, container);
+  renderQuotedPost(record, container);
 };
 
 const renderPosts = (posts) => {

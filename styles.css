@@ -480,6 +480,55 @@ input:focus {
   color: var(--muted);
 }
 
+.quote-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  background: white;
+  text-decoration: none;
+  color: inherit;
+  display: grid;
+  gap: 8px;
+}
+
+.quote-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+
+.quote-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.quote-author {
+  font-weight: 600;
+}
+
+.quote-handle,
+.quote-date {
+  color: var(--muted);
+}
+
+.quote-text {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.quote-embed .post-media {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.quote-unavailable {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .empty {
   text-align: center;
   color: var(--muted);
