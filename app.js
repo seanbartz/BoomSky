@@ -32,6 +32,9 @@ const PACERS_BLOCKED_HANDLES = new Set([
   "tonyreast.bsky.social",
   "ipacers.bsky.social",
 ]);
+const DEFAULT_AVATAR = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#dbe2f8"/><path d="M40 42c8.8 0 16-7.2 16-16S48.8 10 40 10s-16 7.2-16 16 7.2 16 16 16zm0 8c-13.3 0-24 10.7-24 24h48c0-13.3-10.7-24-24-24z" fill="#8aa0d6"/></svg>',
+)}`;
 
 const form = document.getElementById("credentials-form");
 const timeline = document.getElementById("timeline");
@@ -71,6 +74,179 @@ const formatDate = (value) => {
   return date.toLocaleString();
 };
 
+const buildTextSegments = (text, facets = []) => {
+  if (!facets.length) {
+    return null;
+  }
+
+  const encoder = new TextEncoder();
+  const map = [];
+  let byteIndex = 0;
+  let stringIndex = 0;
+  for (const char of text) {
+    const bytes = encoder.encode(char).length;
+    map.push({
+      startByte: byteIndex,
+      endByte: byteIndex + bytes,
+      startIndex: stringIndex,
+      endIndex: stringIndex + char.length,
+    });
+    byteIndex += bytes;
+    stringIndex += char.length;
+  }
+
+  const getStringIndex = (targetByte) => {
+    for (const entry of map) {
+      if (targetByte <= entry.endByte) {
+        return targetByte === entry.endByte ? entry.endIndex : entry.startIndex;
+      }
+    }
+    return text.length;
+  };
+
+  const linkFacets = facets
+    .map((facet) => {
+      const link = facet.features?.find(
+        (feature) => feature.$type === "app.bsky.richtext.facet#link",
+      );
+      if (!link) {
+        return null;
+      }
+      return {
+        start: getStringIndex(facet.index.byteStart),
+        end: getStringIndex(facet.index.byteEnd),
+        uri: link.uri,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.start - b.start);
+
+  if (!linkFacets.length) {
+    return null;
+  }
+
+  const fragments = [];
+  let cursor = 0;
+  linkFacets.forEach((facet) => {
+    if (facet.start > cursor) {
+      fragments.push({ text: text.slice(cursor, facet.start) });
+    }
+    fragments.push({
+      text: text.slice(facet.start, facet.end),
+      link: facet.uri,
+    });
+    cursor = facet.end;
+  });
+  if (cursor < text.length) {
+    fragments.push({ text: text.slice(cursor) });
+  }
+
+  return fragments;
+};
+
+const linkifyText = (text) => {
+  const regex = /(https?:\/\/[^\s]+)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ text: text.slice(lastIndex, match.index) });
+    }
+    parts.push({ text: match[0], link: match[0] });
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push({ text: text.slice(lastIndex) });
+  }
+
+  return parts;
+};
+
+const renderPostText = (container, text, facets) => {
+  container.textContent = "";
+  const segments = buildTextSegments(text, facets) || linkifyText(text);
+  segments.forEach((segment) => {
+    if (segment.link) {
+      const anchor = document.createElement("a");
+      anchor.href = segment.link;
+      anchor.textContent = segment.text;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      container.appendChild(anchor);
+    } else {
+      container.appendChild(document.createTextNode(segment.text));
+    }
+  });
+};
+
+const renderImages = (images, container) => {
+  if (!images?.length) {
+    return;
+  }
+  const media = document.createElement("div");
+  media.className = "post-media";
+  images.forEach((image) => {
+    const img = document.createElement("img");
+    img.src = image.thumb || image.fullsize || "";
+    img.alt = image.alt || "Post image";
+    media.appendChild(img);
+  });
+  container.appendChild(media);
+};
+
+const renderExternalCard = (external, container) => {
+  if (!external) {
+    return;
+  }
+  const card = document.createElement("a");
+  card.className = "link-card";
+  card.href = external.uri;
+  card.target = "_blank";
+  card.rel = "noopener noreferrer";
+
+  if (external.thumb) {
+    const thumb = document.createElement("img");
+    thumb.src = external.thumb;
+    thumb.alt = external.title || "External preview";
+    card.appendChild(thumb);
+  }
+
+  const content = document.createElement("div");
+  const title = document.createElement("h4");
+  title.textContent = external.title || "External link";
+  const desc = document.createElement("p");
+  desc.textContent = external.description || "";
+  const url = document.createElement("span");
+  let host = external.uri;
+  try {
+    host = new URL(external.uri).hostname;
+  } catch (error) {
+    host = external.uri;
+  }
+  url.textContent = host;
+
+  content.appendChild(title);
+  content.appendChild(desc);
+  content.appendChild(url);
+  card.appendChild(content);
+
+  container.appendChild(card);
+};
+
+const renderEmbed = (embed, container) => {
+  if (!embed) {
+    return;
+  }
+  const images = embed.images || embed.media?.images;
+  const external = embed.external || embed.record?.external;
+
+  renderImages(images, container);
+  renderExternalCard(external, container);
+};
+
 const renderPosts = (posts) => {
   timeline.innerHTML = "";
   if (posts.length === 0) {
@@ -84,10 +260,19 @@ const renderPosts = (posts) => {
     const author = post.author || {};
     const clone = postTemplate.content.cloneNode(true);
 
+    const avatar = clone.querySelector(".post-avatar");
+    avatar.src = author.avatar || DEFAULT_AVATAR;
+    avatar.alt = author.displayName || author.handle || "User avatar";
+
     clone.querySelector(".post-author").textContent = author.displayName || "Unknown";
     clone.querySelector(".post-handle").textContent = `@${author.handle || "unknown"}`;
     clone.querySelector(".post-date").textContent = formatDate(record.createdAt);
-    clone.querySelector(".post-text").textContent = record.text || "";
+
+    const textContainer = clone.querySelector(".post-text");
+    renderPostText(textContainer, record.text || "", record.facets || []);
+
+    const embedContainer = clone.querySelector(".post-embed");
+    renderEmbed(post.embed, embedContainer);
 
     timeline.appendChild(clone);
   });
