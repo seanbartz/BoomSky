@@ -28,6 +28,10 @@ const PACERS_KEYWORDS = [
   "tony bradley",
   "tyrese haliburton",
 ];
+const PACERS_BLOCKED_HANDLES = new Set([
+  "tonyreast.bsky.social",
+  "ipacers.bsky.social",
+]);
 
 const form = document.getElementById("credentials-form");
 const timeline = document.getElementById("timeline");
