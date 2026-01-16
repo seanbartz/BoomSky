@@ -373,23 +373,6 @@ const renderPosts = (posts) => {
     clone.querySelector(".post-handle").textContent = `@${author.handle || "unknown"}`;
     clone.querySelector(".post-date").textContent = formatDate(record.createdAt);
 
-    const reason = item.reason;
-    const reasonWrap = clone.querySelector(".post-reason");
-    if (reason?.$type?.includes("reasonRepost")) {
-      const by = reason.by || {};
-      reasonWrap.hidden = false;
-      reasonWrap.innerHTML = "";
-      const reasonAvatar = document.createElement("img");
-      reasonAvatar.src = by.avatar || DEFAULT_AVATAR;
-      reasonAvatar.alt = by.displayName || by.handle || "Reposter avatar";
-      const label = document.createElement("span");
-      const name = by.displayName || by.handle || "Someone";
-      const handle = by.handle ? `(@${by.handle})` : "";
-      label.textContent = `Reposted by ${name} ${handle}`.trim();
-      reasonWrap.appendChild(reasonAvatar);
-      reasonWrap.appendChild(label);
-    }
-
     const textContainer = clone.querySelector(".post-text");
     renderPostText(textContainer, record.text || "", record.facets || []);
 
@@ -479,12 +462,15 @@ const filterTimeline = (feed, hidePacers) => {
     }
     const parentAuthor = item.reply.parent.author;
     if (!parentAuthor) {
-      return false;
+      return true;
     }
     if (parentAuthor.handle && parentAuthor.handle === currentHandle) {
       return true;
     }
-    return parentAuthor.viewer?.following === true;
+    if (parentAuthor.viewer?.following === false) {
+      return false;
+    }
+    return true;
   };
 
   if (!hidePacers) {
