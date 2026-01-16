@@ -268,14 +268,6 @@ input[type="search"] {
   border-radius: 12px;
   border: 1px solid var(--border);
   font-size: 0.95rem;
-  background: #fff;
-}
-
-textarea {
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  font-size: 0.95rem;
   font-family: inherit;
   background: #fff;
   resize: vertical;
@@ -488,17 +480,6 @@ input:focus {
   gap: 16px;
   font-size: 0.85rem;
   color: var(--muted);
-}
-
-.post-action {
-  background: transparent;
-  border: none;
-  color: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 
 .quote-card {
