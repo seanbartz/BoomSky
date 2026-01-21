@@ -169,11 +169,27 @@ const linkifyText = (text) => {
   return parts;
 };
 
+const isSafeUrl = (url, allowRelative = true) => {
+  if (!url || typeof url !== "string" || url.trim() === "") {
+    return false;
+  }
+  try {
+    // If allowRelative is true, use base URL for resolution
+    // If false, only allow absolute URLs
+    const parsed = allowRelative 
+      ? new URL(url, window.location.href)
+      : new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch (e) {
+    return false;
+  }
+};
+
 const renderPostText = (container, text, facets) => {
   container.textContent = "";
   const segments = buildTextSegments(text, facets) || linkifyText(text);
   segments.forEach((segment) => {
-    if (segment.link) {
+    if (segment.link && isSafeUrl(segment.link)) {
       const anchor = document.createElement("a");
       anchor.href = segment.link;
       anchor.textContent = segment.text;
@@ -193,25 +209,39 @@ const renderImages = (images, container) => {
   const media = document.createElement("div");
   media.className = "post-media";
   images.forEach((image) => {
-    const img = document.createElement("img");
-    img.src = image.thumb || image.fullsize || "";
-    img.alt = image.alt || "Post image";
-    media.appendChild(img);
+    const imgUrl = image.thumb || image.fullsize || "";
+    // Only render images with safe URLs - require absolute URLs for external images
+    if (imgUrl && isSafeUrl(imgUrl, false)) {
+      const img = document.createElement("img");
+      img.src = imgUrl;
+      img.alt = image.alt || "Post image";
+      media.appendChild(img);
+    }
   });
-  container.appendChild(media);
+  // Only append media container if it has children
+  if (media.children.length > 0) {
+    container.appendChild(media);
+  }
 };
 
 const renderExternalCard = (external, container) => {
   if (!external) {
     return;
   }
+  
+  // Validate the external URI for security - require absolute URLs
+  if (!isSafeUrl(external.uri, false)) {
+    // Don't render the card if the URI is not safe
+    return;
+  }
+  
   const card = document.createElement("a");
   card.className = "link-card";
   card.href = external.uri;
   card.target = "_blank";
   card.rel = "noopener noreferrer";
 
-  if (external.thumb) {
+  if (external.thumb && isSafeUrl(external.thumb, false)) {
     const thumb = document.createElement("img");
     thumb.src = external.thumb;
     thumb.alt = external.title || "External preview";
@@ -224,13 +254,14 @@ const renderExternalCard = (external, container) => {
   const desc = document.createElement("p");
   desc.textContent = external.description || "";
   const url = document.createElement("span");
-  let host = external.uri;
+  // Since external.uri has been validated as absolute URL, parse it safely
   try {
-    host = new URL(external.uri).hostname;
+    const host = new URL(external.uri).hostname;
+    url.textContent = host;
   } catch (error) {
-    host = external.uri;
+    // Fallback to showing full URI if parsing fails
+    url.textContent = external.uri;
   }
-  url.textContent = host;
 
   content.appendChild(title);
   content.appendChild(desc);
