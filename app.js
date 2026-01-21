@@ -201,37 +201,16 @@ const renderImages = (images, container) => {
   container.appendChild(media);
 };
 
-const getSafeExternalHref = (externalUri) => {
-  if (!externalUri) {
-    return null;
-  }
-  try {
-    const url = new URL(externalUri);
-    if (url.protocol === "http:" || url.protocol === "https:") {
-      return url.toString();
-    }
-  } catch (e) {
-    // Invalid URL; treat as unsafe.
-  }
-  return null;
-};
-
 const renderExternalCard = (external, container) => {
   if (!external) {
     return;
   }
   const card = document.createElement("a");
   card.className = "link-card";
+  card.href = external.uri;
+  card.target = "_blank";
+  card.rel = "noopener noreferrer";
 
-  const safeHref = getSafeExternalHref(external.uri);
-  if (safeHref) {
-    card.href = safeHref;
-    card.target = "_blank";
-    card.rel = "noopener noreferrer";
-  } else {
-    // Fallback to a safe, non-navigating link if the URI is unsafe or invalid.
-    card.href = "#";
-  }
   if (external.thumb) {
     const thumb = document.createElement("img");
     thumb.src = external.thumb;
@@ -365,7 +344,7 @@ const renderEmbed = (embed, container) => {
     return;
   }
   const images = embed.images || embed.media?.images;
-  const external = embed.external || embed.media?.external || embed.record?.external;
+  const external = embed.external || embed.record?.external;
   const record = extractQuotedRecord(embed);
 
   renderImages(images, container);
@@ -394,23 +373,6 @@ const renderPosts = (posts) => {
     clone.querySelector(".post-handle").textContent = `@${author.handle || "unknown"}`;
     clone.querySelector(".post-date").textContent = formatDate(record.createdAt);
 
-    const reason = item.reason;
-    const reasonWrap = clone.querySelector(".post-reason");
-    if (reason?.$type?.includes("reasonRepost")) {
-      const by = reason.by || {};
-      reasonWrap.hidden = false;
-      reasonWrap.innerHTML = "";
-      const reasonAvatar = document.createElement("img");
-      reasonAvatar.src = by.avatar || DEFAULT_AVATAR;
-      reasonAvatar.alt = by.displayName || by.handle || "Reposter avatar";
-      const label = document.createElement("span");
-      const name = by.displayName || by.handle || "Someone";
-      const handle = by.handle ? `(@${by.handle})` : "";
-      label.textContent = `Reposted by ${name} ${handle}`.trim();
-      reasonWrap.appendChild(reasonAvatar);
-      reasonWrap.appendChild(label);
-    }
-
     const textContainer = clone.querySelector(".post-text");
     renderPostText(textContainer, record.text || "", record.facets || []);
 
@@ -420,8 +382,6 @@ const renderPosts = (posts) => {
     const postElement = clone.querySelector(".post");
     postElement.dataset.uri = post.uri || "";
     postElement.dataset.cid = post.cid || "";
-    postElement.dataset.rootUri = item.reply?.root?.uri || post.uri || "";
-    postElement.dataset.rootCid = item.reply?.root?.cid || post.cid || "";
 
     timeline.appendChild(clone);
   });
@@ -502,12 +462,15 @@ const filterTimeline = (feed, hidePacers) => {
     }
     const parentAuthor = item.reply.parent.author;
     if (!parentAuthor) {
-      return false;
+      return true;
     }
     if (parentAuthor.handle && parentAuthor.handle === currentHandle) {
       return true;
     }
-    return parentAuthor.viewer?.following === true;
+    if (parentAuthor.viewer?.following === false) {
+      return false;
+    }
+    return true;
   };
 
   if (!hidePacers) {
@@ -570,10 +533,7 @@ timeline.addEventListener("click", async (event) => {
       await createRecord("app.bsky.feed.post", {
         text: replyText,
         reply: {
-          root: {
-            uri: postElement.dataset.rootUri || uri,
-            cid: postElement.dataset.rootCid || cid,
-          },
+          root: { uri, cid },
           parent: { uri, cid },
         },
         createdAt: new Date().toISOString(),

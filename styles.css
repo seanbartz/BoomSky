@@ -268,14 +268,6 @@ input[type="search"] {
   border-radius: 12px;
   border: 1px solid var(--border);
   font-size: 0.95rem;
-  background: #fff;
-}
-
-textarea {
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  font-size: 0.95rem;
   font-family: inherit;
   background: #fff;
   resize: vertical;
@@ -419,26 +411,6 @@ input:focus {
   flex: 1;
 }
 
-.post-reason {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #eef4ff;
-  color: #1d4ed8;
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
-.post-reason img {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
 .post-menu {
   background: transparent;
   border: none;
@@ -508,17 +480,6 @@ input:focus {
   gap: 16px;
   font-size: 0.85rem;
   color: var(--muted);
-}
-
-.post-action {
-  background: transparent;
-  border: none;
-  color: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 
 .quote-card {
