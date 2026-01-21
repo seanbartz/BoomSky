@@ -169,17 +169,34 @@ const linkifyText = (text) => {
   return parts;
 };
 
+const isSafeUrl = (url) => {
+  if (!url || typeof url !== "string" || url.trim() === "") {
+    return false;
+  }
+  try {
+    const parsed = new URL(url, window.location.href);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch (e) {
+    return false;
+  }
+};
+
 const renderPostText = (container, text, facets) => {
   container.textContent = "";
   const segments = buildTextSegments(text, facets) || linkifyText(text);
   segments.forEach((segment) => {
     if (segment.link) {
       const anchor = document.createElement("a");
-      anchor.href = segment.link;
-      anchor.textContent = segment.text;
-      anchor.target = "_blank";
-      anchor.rel = "noopener noreferrer";
-      container.appendChild(anchor);
+      if (isSafeUrl(segment.link)) {
+        anchor.href = segment.link;
+        anchor.textContent = segment.text;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        container.appendChild(anchor);
+      } else {
+        // Render as plain text if URL is not safe
+        container.appendChild(document.createTextNode(segment.text));
+      }
     } else {
       container.appendChild(document.createTextNode(segment.text));
     }
