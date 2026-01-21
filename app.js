@@ -210,10 +210,14 @@ const renderImages = (images, container) => {
   const media = document.createElement("div");
   media.className = "post-media";
   images.forEach((image) => {
-    const img = document.createElement("img");
-    img.src = image.thumb || image.fullsize || "";
-    img.alt = image.alt || "Post image";
-    media.appendChild(img);
+    const imgUrl = image.thumb || image.fullsize || "";
+    // Only render images with safe URLs
+    if (imgUrl && isSafeUrl(imgUrl)) {
+      const img = document.createElement("img");
+      img.src = imgUrl;
+      img.alt = image.alt || "Post image";
+      media.appendChild(img);
+    }
   });
   container.appendChild(media);
 };
