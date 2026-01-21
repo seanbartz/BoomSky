@@ -214,7 +214,10 @@ const renderImages = (images, container) => {
       media.appendChild(img);
     }
   });
-  container.appendChild(media);
+  // Only append media container if it has children
+  if (media.children.length > 0) {
+    container.appendChild(media);
+  }
 };
 
 const renderExternalCard = (external, container) => {
@@ -247,12 +250,8 @@ const renderExternalCard = (external, container) => {
   const desc = document.createElement("p");
   desc.textContent = external.description || "";
   const url = document.createElement("span");
-  let host = external.uri;
-  try {
-    host = new URL(external.uri).hostname;
-  } catch (error) {
-    host = external.uri;
-  }
+  // Since external.uri has been validated by isSafeUrl, we can safely parse it
+  const host = new URL(external.uri).hostname;
   url.textContent = host;
 
   content.appendChild(title);
