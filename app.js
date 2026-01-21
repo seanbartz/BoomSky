@@ -169,12 +169,16 @@ const linkifyText = (text) => {
   return parts;
 };
 
-const isSafeUrl = (url) => {
+const isSafeUrl = (url, allowRelative = true) => {
   if (!url || typeof url !== "string" || url.trim() === "") {
     return false;
   }
   try {
-    const parsed = new URL(url, window.location.href);
+    // If allowRelative is true, use base URL for resolution
+    // If false, only allow absolute URLs
+    const parsed = allowRelative 
+      ? new URL(url, window.location.href)
+      : new URL(url);
     return parsed.protocol === "http:" || parsed.protocol === "https:";
   } catch (e) {
     return false;
@@ -206,8 +210,8 @@ const renderImages = (images, container) => {
   media.className = "post-media";
   images.forEach((image) => {
     const imgUrl = image.thumb || image.fullsize || "";
-    // Only render images with safe URLs
-    if (imgUrl && isSafeUrl(imgUrl)) {
+    // Only render images with safe URLs - require absolute URLs for external images
+    if (imgUrl && isSafeUrl(imgUrl, false)) {
       const img = document.createElement("img");
       img.src = imgUrl;
       img.alt = image.alt || "Post image";
@@ -225,8 +229,8 @@ const renderExternalCard = (external, container) => {
     return;
   }
   
-  // Validate the external URI for security
-  if (!isSafeUrl(external.uri)) {
+  // Validate the external URI for security - require absolute URLs
+  if (!isSafeUrl(external.uri, false)) {
     // Don't render the card if the URI is not safe
     return;
   }
@@ -237,7 +241,7 @@ const renderExternalCard = (external, container) => {
   card.target = "_blank";
   card.rel = "noopener noreferrer";
 
-  if (external.thumb && isSafeUrl(external.thumb)) {
+  if (external.thumb && isSafeUrl(external.thumb, false)) {
     const thumb = document.createElement("img");
     thumb.src = external.thumb;
     thumb.alt = external.title || "External preview";
@@ -250,9 +254,14 @@ const renderExternalCard = (external, container) => {
   const desc = document.createElement("p");
   desc.textContent = external.description || "";
   const url = document.createElement("span");
-  // Since external.uri has been validated by isSafeUrl, we can safely parse it
-  const host = new URL(external.uri).hostname;
-  url.textContent = host;
+  // Since external.uri has been validated as absolute URL, parse it safely
+  try {
+    const host = new URL(external.uri).hostname;
+    url.textContent = host;
+  } catch (error) {
+    // Fallback to showing full URI if parsing fails
+    url.textContent = external.uri;
+  }
 
   content.appendChild(title);
   content.appendChild(desc);
