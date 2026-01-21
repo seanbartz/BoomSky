@@ -185,18 +185,13 @@ const renderPostText = (container, text, facets) => {
   container.textContent = "";
   const segments = buildTextSegments(text, facets) || linkifyText(text);
   segments.forEach((segment) => {
-    if (segment.link) {
+    if (segment.link && isSafeUrl(segment.link)) {
       const anchor = document.createElement("a");
-      if (isSafeUrl(segment.link)) {
-        anchor.href = segment.link;
-        anchor.textContent = segment.text;
-        anchor.target = "_blank";
-        anchor.rel = "noopener noreferrer";
-        container.appendChild(anchor);
-      } else {
-        // Render as plain text if URL is not safe
-        container.appendChild(document.createTextNode(segment.text));
-      }
+      anchor.href = segment.link;
+      anchor.textContent = segment.text;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      container.appendChild(anchor);
     } else {
       container.appendChild(document.createTextNode(segment.text));
     }
