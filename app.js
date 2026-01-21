@@ -222,13 +222,20 @@ const renderExternalCard = (external, container) => {
   if (!external) {
     return;
   }
+  
+  // Validate the external URI for security
+  if (!isSafeUrl(external.uri)) {
+    // Don't render the card if the URI is not safe
+    return;
+  }
+  
   const card = document.createElement("a");
   card.className = "link-card";
   card.href = external.uri;
   card.target = "_blank";
   card.rel = "noopener noreferrer";
 
-  if (external.thumb) {
+  if (external.thumb && isSafeUrl(external.thumb)) {
     const thumb = document.createElement("img");
     thumb.src = external.thumb;
     thumb.alt = external.title || "External preview";
