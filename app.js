@@ -201,16 +201,37 @@ const renderImages = (images, container) => {
   container.appendChild(media);
 };
 
+const getSafeExternalHref = (externalUri) => {
+  if (!externalUri) {
+    return null;
+  }
+  try {
+    const url = new URL(externalUri);
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      return url.toString();
+    }
+  } catch (e) {
+    // Invalid URL; treat as unsafe.
+  }
+  return null;
+};
+
 const renderExternalCard = (external, container) => {
   if (!external) {
     return;
   }
   const card = document.createElement("a");
   card.className = "link-card";
-  card.href = external.uri;
-  card.target = "_blank";
-  card.rel = "noopener noreferrer";
 
+  const safeHref = getSafeExternalHref(external.uri);
+  if (safeHref) {
+    card.href = safeHref;
+    card.target = "_blank";
+    card.rel = "noopener noreferrer";
+  } else {
+    // Fallback to a safe, non-navigating link if the URI is unsafe or invalid.
+    card.href = "#";
+  }
   if (external.thumb) {
     const thumb = document.createElement("img");
     thumb.src = external.thumb;
