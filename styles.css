@@ -925,13 +925,26 @@ button {
     align-items: flex-start;
   }
 
+  body {
+    font-size: 18px;
+  }
+
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .app-shell {
+    max-width: 100%;
+    padding: 16px 16px 64px;
   }
 
   .top-actions {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .tab-button {
+    font-size: 1rem;
   }
 
   .post {
@@ -941,6 +954,15 @@ button {
   .post-avatar {
     width: 52px;
     height: 52px;
+  }
+
+  .field input,
+  .field textarea {
+    font-size: 1.05rem;
+  }
+
+  .post-action {
+    font-size: 0.95rem;
   }
 
   .link-card {
