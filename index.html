@@ -4,11 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BoomSky</title>
+    <link id="favicon" rel="icon" type="image/svg+xml" href="favicon-orange.svg" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -19,16 +20,16 @@
           <span class="logo-dot"></span>
           <div>
             <p class="eyebrow">BoomSky</p>
-            <h1>Bluesky with spoiler control</h1>
           </div>
         </div>
-        <label class="search">
-          <span>Search</span>
-          <input type="search" placeholder="Search posts, handles, lists" disabled />
-        </label>
         <div class="top-actions">
-          <button class="ghost">New post</button>
-          <button class="primary">Account</button>
+          <div class="toggle">
+            <span class="toggle-label">Pacers Shield</span>
+            <button id="pacers-toggle" class="toggle-button" type="button">
+              <span id="pacers-state">On</span>
+              <span class="toggle-indicator"></span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -47,36 +48,39 @@
           </nav>
           <div class="shield-card">
             <p class="label">Pacers spoiler shield</p>
-            <p class="hero-value">Active when you&apos;re not caught up</p>
-            <p class="muted">Toggle the shield in the sign-in panel.</p>
+            <p class="hero-value">Toggle spoilers on demand</p>
+            <p class="muted">Use the switch in the header anytime.</p>
           </div>
         </aside>
 
         <main class="feed">
+          <div class="view-tabs">
+            <button id="tab-timeline" class="tab-button is-active" type="button">
+              Timeline
+            </button>
+            <button id="tab-notifications" class="tab-button" type="button">
+              Notifications <span id="notifications-pill" class="pill tiny">0</span>
+            </button>
+          </div>
+
           <section class="composer">
-            <div class="composer-head">
-              <div class="avatar-sample">B</div>
-              <div>
-                <h2>What&apos;s happening?</h2>
-                <p class="muted">
-                  Write a post, then like, reply, or repost directly from your timeline.
-                </p>
-              </div>
-            </div>
             <form id="composer-form">
-              <label class="field">
-                <span>New post</span>
-                <textarea
-                  name="postText"
-                  rows="4"
-                  placeholder="Share an update..."
-                  required
-                ></textarea>
-              </label>
+              <div class="composer-row">
+                <img id="composer-avatar" class="avatar-sample" alt="Your avatar" />
+                <label class="field">
+                  <span>New post</span>
+                  <textarea
+                    name="postText"
+                    rows="4"
+                    placeholder="Share an update..."
+                    required
+                  ></textarea>
+                </label>
+              </div>
               <div class="composer-actions">
-                <button class="ghost" type="button" disabled>Add photo</button>
-                <button class="ghost" type="button" disabled>Add link</button>
-                <button class="ghost" type="button" disabled>Spoiler tags</button>
+                <input id="photo-input" type="file" accept="image/*" hidden />
+                <button id="photo-button" class="ghost" type="button">Add photo</button>
+                <span id="photo-name" class="file-name"></span>
                 <button class="primary" type="submit">Post</button>
               </div>
             </form>
@@ -84,18 +88,27 @@
 
           <section class="card timeline">
             <div class="timeline-header">
-              <div>
-                <h2>Your timeline</h2>
-                <p class="muted">Images, rich links, and embeds appear below.</p>
-              </div>
               <span id="status-pill" class="pill">Waiting for sign-in</span>
+              <button id="refresh-button" class="ghost" type="button">Refresh</button>
             </div>
             <div id="timeline" class="timeline-list"></div>
+          </section>
+
+          <section id="notifications" class="card notifications">
+            <div class="timeline-header">
+              <div>
+                <h2>Notifications</h2>
+                <p class="muted">Replies, likes, reposts, and mentions.</p>
+              </div>
+              <button id="mark-read" class="ghost" type="button">Mark all read</button>
+            </div>
+            <div id="notifications-list" class="timeline-list"></div>
           </section>
         </main>
 
         <aside class="panel">
           <section class="card">
+            <div id="pacers-status" class="shield-status">Pacers Shield On</div>
             <h2>Sign in to Bluesky</h2>
             <p class="muted">
               Use an app password from your Bluesky account settings. We only use it to
@@ -129,20 +142,6 @@
                 <input type="number" name="limit" min="5" max="100" value="30" />
               </label>
 
-              <fieldset class="field">
-                <legend>Are you up-to-date on Pacers games?</legend>
-                <div class="radio-row">
-                  <label class="radio">
-                    <input type="radio" name="caughtUp" value="yes" />
-                    <span>Yes, I&apos;m caught up</span>
-                  </label>
-                  <label class="radio">
-                    <input type="radio" name="caughtUp" value="no" checked />
-                    <span>No, hide spoilers</span>
-                  </label>
-                </div>
-              </fieldset>
-
               <button type="submit" class="primary">Load timeline</button>
             </form>
             <p class="footnote">
@@ -151,14 +150,6 @@
             </p>
           </section>
 
-          <section class="card tips">
-            <h3>Timeline highlights</h3>
-            <ul>
-              <li>Image grids show spoiler-free photo previews.</li>
-              <li>External links appear as article cards.</li>
-              <li>Embedded posts keep conversation context.</li>
-            </ul>
-          </section>
         </aside>
       </div>
     </div>
@@ -168,6 +159,7 @@
         <img class="post-avatar" alt="" />
         <div class="post-body">
           <div class="post-meta">
+            <div class="repost-meta"></div>
             <div class="post-author-group">
               <span class="post-author"></span>
               <span class="post-handle"></span>
@@ -178,13 +170,37 @@
               •••
             </button>
           </div>
+          <div class="post-menu-panel">
+            <button type="button" data-menu-action="copy">Copy link</button>
+            <button type="button" data-menu-action="quote">Quote</button>
+            <button type="button" data-menu-action="delete">Delete</button>
+          </div>
+          <div class="thread-context"></div>
           <div class="post-text"></div>
           <div class="post-embed"></div>
+          <div class="quote-composer">
+            <label>
+              <span>Quote post</span>
+              <textarea rows="3" placeholder="Add a thought..."></textarea>
+            </label>
+            <div class="quote-actions">
+              <button type="button" class="ghost" data-quote-action="cancel">Cancel</button>
+              <button type="button" class="primary" data-quote-action="post">Post quote</button>
+            </div>
+          </div>
+          <div class="thread-expand"></div>
           <div class="post-actions">
-            <button class="post-action" type="button" data-action="reply">💬 Reply</button>
-            <button class="post-action" type="button" data-action="repost">🔁 Repost</button>
-            <button class="post-action" type="button" data-action="like">❤️ Like</button>
+            <button class="post-action" type="button" data-action="reply">
+              💬 Reply <span class="action-count" data-count="reply">0</span>
+            </button>
+            <button class="post-action" type="button" data-action="repost">
+              🔁 Repost <span class="action-count" data-count="repost">0</span>
+            </button>
+            <button class="post-action" type="button" data-action="like">
+              ❤️ Like <span class="action-count" data-count="like">0</span>
+            </button>
             <button class="post-action" type="button" data-action="share">↗️ Share</button>
+            <button class="post-action" type="button" data-action="thread">🧵 View thread</button>
           </div>
         </div>
       </article>

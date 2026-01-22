@@ -12,7 +12,8 @@ Indiana Pacers spoilers unless you confirm you're caught up.
    ```
 
 2. Open the app at <http://localhost:5173>.
-3. Enter your Bluesky handle + app password and choose whether you're caught up.
+3. Enter your Bluesky handle + app password and load the timeline.
+4. Toggle the Pacers Shield in the header to hide/show spoilers anytime.
 
 ## Notes
 

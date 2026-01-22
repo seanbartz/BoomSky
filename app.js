@@ -1,4 +1,5 @@
 const API_BASE = "https://bsky.social/xrpc";
+const STORAGE_KEY = "boomsky-hide-pacers";
 const PACERS_KEYWORDS = [
   "pacers",
   "indiana pacers",
@@ -41,33 +42,89 @@ const timeline = document.getElementById("timeline");
 const statusPill = document.getElementById("status-pill");
 const postTemplate = document.getElementById("post-template");
 const composerForm = document.getElementById("composer-form");
-let currentHandle = "";
-let currentSession = null;
-let currentToken = "";
+const pacersToggle = document.getElementById("pacers-toggle");
+const pacersState = document.getElementById("pacers-state");
+const refreshButton = document.getElementById("refresh-button");
+const tabTimeline = document.getElementById("tab-timeline");
+const tabNotifications = document.getElementById("tab-notifications");
+const notificationsSection = document.getElementById("notifications");
+const notificationsList = document.getElementById("notifications-list");
+const notificationsPill = document.getElementById("notifications-pill");
+const markReadButton = document.getElementById("mark-read");
+const composerAvatar = document.getElementById("composer-avatar");
+const photoInput = document.getElementById("photo-input");
+const photoButton = document.getElementById("photo-button");
+const photoName = document.getElementById("photo-name");
+const pacersStatus = document.getElementById("pacers-status");
+const favicon = document.getElementById("favicon");
+
+const state = {
+  handle: "excitedstate.bsky.social",
+  session: null,
+  token: "",
+  hidePacers: true,
+  limit: 30,
+  feed: [],
+  notifications: [],
+  view: "timeline",
+  notificationsSeenAt: null,
+  composerImage: null,
+};
+
+const storedHide = localStorage.getItem(STORAGE_KEY);
+if (storedHide !== null) {
+  state.hidePacers = storedHide === "true";
+}
 
 const setStatus = (text) => {
   statusPill.textContent = text;
 };
 
+const renderMessage = (container, className, message) => {
+  container.innerHTML = "";
+  const node = document.createElement("div");
+  node.className = className;
+  node.textContent = message;
+  container.appendChild(node);
+};
+
 const showError = (message) => {
-  timeline.innerHTML = "";
-  const error = document.createElement("div");
-  error.className = "error";
-  error.textContent = message;
-  timeline.appendChild(error);
+  renderMessage(timeline, "error", message);
 };
 
 const showEmpty = (message) => {
-  timeline.innerHTML = "";
-  const empty = document.createElement("div");
-  empty.className = "empty";
-  empty.textContent = message;
-  timeline.appendChild(empty);
+  renderMessage(timeline, "empty", message);
+};
+
+const showNotificationError = (message) => {
+  renderMessage(notificationsList, "error", message);
 };
 
 const containsPacersSpoiler = (text) => {
   const lowered = text.toLowerCase();
   return PACERS_KEYWORDS.some((keyword) => lowered.includes(keyword));
+};
+
+const updatePacersUI = () => {
+  if (!pacersToggle || !pacersState) {
+    return;
+  }
+  pacersToggle.classList.toggle("is-off", !state.hidePacers);
+  pacersState.textContent = state.hidePacers ? "On" : "Off";
+  document.body.classList.toggle("theme-navy", !state.hidePacers);
+  if (favicon) {
+    favicon.href = state.hidePacers ? "favicon-orange.svg" : "favicon-navy.svg";
+  }
+  if (pacersStatus) {
+    pacersStatus.textContent = state.hidePacers ? "Pacers Shield On" : "Pacers Shield Off";
+  }
+};
+
+const updateComposerAvatar = (avatarUrl) => {
+  if (!composerAvatar) {
+    return;
+  }
+  composerAvatar.src = avatarUrl || DEFAULT_AVATAR;
 };
 
 const formatDate = (value) => {
@@ -76,6 +133,16 @@ const formatDate = (value) => {
   }
   const date = new Date(value);
   return date.toLocaleString();
+};
+
+const truncateText = (text, maxLength = 160) => {
+  if (!text) {
+    return "";
+  }
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, maxLength).trim()}...`;
 };
 
 const buildTextSegments = (text, facets = []) => {
@@ -224,6 +291,32 @@ const renderImages = (images, container) => {
   }
 };
 
+const renderVideo = (video, container) => {
+  if (!video) {
+    return;
+  }
+  const card = document.createElement("div");
+  card.className = "video-card";
+  if (video.playlist) {
+    const player = document.createElement("video");
+    player.controls = true;
+    if (video.thumbnail) {
+      player.poster = video.thumbnail;
+    }
+    const source = document.createElement("source");
+    source.src = video.playlist;
+    source.type = "application/x-mpegURL";
+    player.appendChild(source);
+    card.appendChild(player);
+  } else if (video.thumbnail) {
+    const thumb = document.createElement("img");
+    thumb.src = video.thumbnail;
+    thumb.alt = "Video thumbnail";
+    card.appendChild(thumb);
+  }
+  container.appendChild(card);
+};
+
 const renderExternalCard = (external, container) => {
   if (!external) {
     return;
@@ -282,6 +375,19 @@ const buildPostUrl = (record) => {
     return null;
   }
   return `https://bsky.app/profile/${handle}/post/${rkey}`;
+};
+
+const buildPostUrlFromUri = (uri) => {
+  if (!uri) {
+    return null;
+  }
+  const parts = uri.split("/");
+  const rkey = parts[parts.length - 1];
+  const did = parts[2];
+  if (!rkey || !did) {
+    return null;
+  }
+  return `https://bsky.app/profile/${did}/post/${rkey}`;
 };
 
 const renderQuotedPost = (record, container) => {
@@ -375,12 +481,135 @@ const renderEmbed = (embed, container) => {
     return;
   }
   const images = embed.images || embed.media?.images;
-  const external = embed.external || embed.record?.external;
+  const external = embed.external || embed.media?.external || embed.record?.external;
+  const video =
+    embed.video ||
+    (embed.media?.$type?.includes("video") ? embed.media : null) ||
+    (embed.$type?.includes("video") ? embed : null);
   const record = extractQuotedRecord(embed);
 
   renderImages(images, container);
   renderExternalCard(external, container);
+  renderVideo(video, container);
   renderQuotedPost(record, container);
+};
+
+const renderReplyContext = (item, container) => {
+  container.innerHTML = "";
+  container.style.display = "none";
+  const parent = item.reply?.parent;
+  if (!parent) {
+    return;
+  }
+  container.style.display = "block";
+
+  const label = document.createElement("div");
+  label.className = "thread-label";
+  label.textContent = "Replying to";
+  const text = document.createElement("div");
+  text.className = "thread-text";
+
+  if (parent.$type?.includes("viewNotFound")) {
+    text.textContent = "Original post unavailable.";
+  } else if (parent.$type?.includes("viewBlocked")) {
+    text.textContent = "Original post blocked.";
+  } else {
+    const author = parent.author?.displayName || parent.author?.handle || "Unknown";
+    const snippet = truncateText(parent.record?.text || "", 160);
+    text.textContent = `${author}: ${snippet}`;
+  }
+
+  container.appendChild(label);
+  container.appendChild(text);
+};
+
+const fetchThread = async (uri) => {
+  if (!state.token) {
+    throw new Error("Please sign in to view threads.");
+  }
+  const response = await fetch(
+    `${API_BASE}/app.bsky.feed.getPostThread?uri=${encodeURIComponent(uri)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${state.token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Unable to load the thread. Please try again.");
+  }
+
+  return response.json();
+};
+
+const createThreadItem = (node, depth = 0) => {
+  if (!node || !node.post) {
+    return null;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "thread-item";
+  if (depth > 0) {
+    wrapper.classList.add(`thread-indent-${Math.min(depth, 3)}`);
+  }
+
+  const avatar = document.createElement("img");
+  avatar.className = "thread-avatar";
+  avatar.src = node.post.author?.avatar || DEFAULT_AVATAR;
+  avatar.alt = node.post.author?.displayName || node.post.author?.handle || "User avatar";
+
+  const body = document.createElement("div");
+  const meta = document.createElement("div");
+  meta.className = "thread-meta";
+  const author = document.createElement("span");
+  author.textContent = node.post.author?.displayName || "Unknown";
+  const handle = document.createElement("span");
+  handle.className = "thread-handle";
+  handle.textContent = node.post.author?.handle
+    ? `@${node.post.author.handle}`
+    : "@unknown";
+  const date = document.createElement("span");
+  date.className = "thread-date";
+  date.textContent = formatDate(node.post.record?.createdAt);
+
+  meta.appendChild(author);
+  meta.appendChild(handle);
+  meta.appendChild(date);
+
+  const text = document.createElement("div");
+  text.className = "thread-text";
+  renderPostText(text, node.post.record?.text || "", node.post.record?.facets || []);
+
+  body.appendChild(meta);
+  body.appendChild(text);
+
+  wrapper.appendChild(avatar);
+  wrapper.appendChild(body);
+  return wrapper;
+};
+
+const appendThreadNodes = (container, node, depth = 0, maxDepth = 3) => {
+  if (!node || depth > maxDepth) {
+    return;
+  }
+
+  const text = node.post?.record?.text || "";
+  if (state.hidePacers && containsPacersSpoiler(text)) {
+    const hidden = document.createElement("div");
+    hidden.className = "thread-muted";
+    hidden.textContent = "Spoiler hidden in thread.";
+    container.appendChild(hidden);
+    return;
+  }
+
+  const item = createThreadItem(node, depth);
+  if (item) {
+    container.appendChild(item);
+  }
+
+  const replies = node.replies || [];
+  replies.forEach((reply) => appendThreadNodes(container, reply, depth + 1, maxDepth));
 };
 
 const renderPosts = (posts) => {
@@ -400,9 +629,24 @@ const renderPosts = (posts) => {
     avatar.src = author.avatar || DEFAULT_AVATAR;
     avatar.alt = author.displayName || author.handle || "User avatar";
 
+    const repostMeta = clone.querySelector(".repost-meta");
+    if (repostMeta) {
+      const reason = item.reason;
+      if (reason?.$type?.includes("reasonRepost") && reason.by?.handle) {
+        repostMeta.textContent = `Reposted by @${reason.by.handle}`;
+        repostMeta.classList.remove("is-hidden");
+      } else {
+        repostMeta.textContent = "";
+        repostMeta.classList.add("is-hidden");
+      }
+    }
+
     clone.querySelector(".post-author").textContent = author.displayName || "Unknown";
     clone.querySelector(".post-handle").textContent = `@${author.handle || "unknown"}`;
     clone.querySelector(".post-date").textContent = formatDate(record.createdAt);
+
+    const threadContext = clone.querySelector(".thread-context");
+    renderReplyContext(item, threadContext);
 
     const textContainer = clone.querySelector(".post-text");
     renderPostText(textContainer, record.text || "", record.facets || []);
@@ -410,9 +654,41 @@ const renderPosts = (posts) => {
     const embedContainer = clone.querySelector(".post-embed");
     renderEmbed(post.embed, embedContainer);
 
+    const actionCounts = {
+      reply: post.replyCount || 0,
+      repost: post.repostCount || 0,
+      like: post.likeCount || 0,
+    };
+    Object.entries(actionCounts).forEach(([key, value]) => {
+      const countNode = clone.querySelector(`.action-count[data-count="${key}"]`);
+      if (countNode) {
+        countNode.textContent = value;
+      }
+    });
+
+    const likeButton = clone.querySelector('.post-action[data-action="like"]');
+    if (likeButton && post.viewer?.like) {
+      likeButton.classList.add("is-active");
+    }
+    const repostButton = clone.querySelector('.post-action[data-action="repost"]');
+    if (repostButton && post.viewer?.repost) {
+      repostButton.classList.add("is-active");
+    }
+    const menuButton = clone.querySelector(".post-menu");
+    if (menuButton) {
+      menuButton.dataset.uri = post.uri || "";
+      menuButton.dataset.rkey = post.uri?.split("/").pop() || "";
+    }
+    const menuPanel = clone.querySelector(".post-menu-panel");
+    if (menuPanel) {
+      menuPanel.dataset.uri = post.uri || "";
+      menuPanel.dataset.rkey = post.uri?.split("/").pop() || "";
+    }
+
     const postElement = clone.querySelector(".post");
     postElement.dataset.uri = post.uri || "";
     postElement.dataset.cid = post.cid || "";
+    postElement.dataset.threadLoaded = "false";
 
     timeline.appendChild(clone);
   });
@@ -453,18 +729,93 @@ const fetchTimeline = async (token, limit) => {
   return payload.feed || [];
 };
 
+const uploadImage = async (file) => {
+  if (!state.token) {
+    throw new Error("Please sign in before uploading images.");
+  }
+  const response = await fetch(`${API_BASE}/com.atproto.repo.uploadBlob`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${state.token}`,
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to upload the image.");
+  }
+
+  const payload = await response.json();
+  return payload.blob;
+};
+
+const fetchProfile = async (handle) => {
+  const response = await fetch(
+    `${API_BASE}/app.bsky.actor.getProfile?actor=${encodeURIComponent(handle)}`,
+    {
+      headers: state.token
+        ? {
+            Authorization: `Bearer ${state.token}`,
+          }
+        : {},
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Unable to load profile details.");
+  }
+
+  return response.json();
+};
+
+const fetchNotifications = async () => {
+  if (!state.token) {
+    return { notifications: [], seenAt: null };
+  }
+  const response = await fetch(`${API_BASE}/app.bsky.notification.listNotifications`, {
+    headers: {
+      Authorization: `Bearer ${state.token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to load notifications. Please try again.");
+  }
+
+  const payload = await response.json();
+  return {
+    notifications: payload.notifications || [],
+    seenAt: payload.seenAt || null,
+  };
+};
+
+const updateNotificationsSeen = async () => {
+  if (!state.token) {
+    return;
+  }
+  await fetch(`${API_BASE}/app.bsky.notification.updateSeen`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${state.token}`,
+    },
+    body: JSON.stringify({ seenAt: new Date().toISOString() }),
+  });
+};
+
 const createRecord = async (collection, record) => {
-  if (!currentToken || !currentSession?.did) {
+  if (!state.token || !state.session?.did) {
     throw new Error("Please sign in before posting or reacting.");
   }
   const response = await fetch(`${API_BASE}/com.atproto.repo.createRecord`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${currentToken}`,
+      Authorization: `Bearer ${state.token}`,
     },
     body: JSON.stringify({
-      repo: currentSession.did,
+      repo: state.session.did,
       collection,
       record,
     }),
@@ -477,13 +828,172 @@ const createRecord = async (collection, record) => {
   return response.json();
 };
 
-const refreshTimeline = async (limit, hidePacers) => {
-  if (!currentToken) {
+const deleteRecord = async (collection, rkey) => {
+  if (!state.token || !state.session?.did) {
+    throw new Error("Please sign in before deleting posts.");
+  }
+  const response = await fetch(`${API_BASE}/com.atproto.repo.deleteRecord`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${state.token}`,
+    },
+    body: JSON.stringify({
+      repo: state.session.did,
+      collection,
+      rkey,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to delete the post.");
+  }
+
+  return response.json();
+};
+
+const refreshTimeline = async () => {
+  if (!state.token) {
     return;
   }
-  const feed = await fetchTimeline(currentToken, limit);
-  const filtered = filterTimeline(feed, hidePacers);
+  const feed = await fetchTimeline(state.token, state.limit);
+  state.feed = feed;
+  const filtered = filterTimeline(feed, state.hidePacers);
   renderPosts(filtered);
+};
+
+const updateNotificationsPill = (notifications, seenAt) => {
+  if (!notificationsPill) {
+    return;
+  }
+  const unread = notifications.filter((item) => {
+    if (typeof item.isRead === "boolean") {
+      return item.isRead === false;
+    }
+    if (seenAt && item.indexedAt) {
+      return new Date(item.indexedAt) > new Date(seenAt);
+    }
+    return false;
+  }).length;
+  notificationsPill.textContent = unread;
+};
+
+const renderNotifications = (notifications) => {
+  notificationsList.innerHTML = "";
+  if (notifications.length === 0) {
+    renderMessage(notificationsList, "empty", "No notifications yet.");
+    return;
+  }
+
+  notifications.forEach((notification) => {
+    const item = document.createElement("div");
+    item.className = "notification-item";
+    if (notification.isRead === false) {
+      item.classList.add("is-unread");
+    }
+
+    const avatar = document.createElement("img");
+    avatar.className = "post-avatar";
+    avatar.src = notification.author?.avatar || DEFAULT_AVATAR;
+    avatar.alt =
+      notification.author?.displayName || notification.author?.handle || "User avatar";
+
+    const body = document.createElement("div");
+    body.className = "notification-body";
+    const meta = document.createElement("div");
+    meta.className = "notification-meta";
+    const author = document.createElement("strong");
+    author.textContent = notification.author?.displayName || "Unknown";
+    const handle = document.createElement("span");
+    handle.textContent = notification.author?.handle
+      ? `@${notification.author.handle}`
+      : "@unknown";
+    const reason = document.createElement("span");
+    const reasonMap = {
+      like: "liked",
+      reply: "replied",
+      repost: "reposted",
+      mention: "mentioned you",
+      follow: "followed you",
+      quote: "quoted",
+    };
+    reason.textContent = reasonMap[notification.reason] || "activity";
+    const date = document.createElement("span");
+    date.textContent = formatDate(notification.indexedAt);
+
+    meta.appendChild(author);
+    meta.appendChild(handle);
+    meta.appendChild(reason);
+    meta.appendChild(date);
+
+    const text = document.createElement("p");
+    const recordText = notification.record?.text || "";
+    if (recordText) {
+      text.textContent = truncateText(recordText, 180);
+    } else {
+      const target = notification.reasonSubject ? "your post" : "your profile";
+      const fallbackMap = {
+        liked: "Liked",
+        replied: "Replied to",
+        reposted: "Reposted",
+        "mentioned you": "Mentioned you in",
+        "followed you": "Followed you",
+        quoted: "Quoted",
+        activity: "Activity on",
+      };
+      const prefix = fallbackMap[reason.textContent] || "Activity on";
+      const suffix = notification.reasonSubject ? "your post." : "your profile.";
+      if (reason.textContent === "followed you") {
+        text.textContent = "Followed you.";
+      } else {
+        text.textContent = `${prefix} ${suffix}`;
+      }
+    }
+
+    body.appendChild(meta);
+    body.appendChild(text);
+
+    const link = buildPostUrlFromUri(notification.reasonSubject);
+    if (link) {
+      const linkEl = document.createElement("a");
+      linkEl.href = link;
+      linkEl.target = "_blank";
+      linkEl.rel = "noopener noreferrer";
+      linkEl.textContent = "View post";
+      linkEl.className = "thread-muted";
+      body.appendChild(linkEl);
+    }
+
+    item.appendChild(avatar);
+    item.appendChild(body);
+    notificationsList.appendChild(item);
+  });
+};
+
+const refreshNotifications = async () => {
+  if (!state.token) {
+    return;
+  }
+  const payload = await fetchNotifications();
+  state.notifications = payload.notifications;
+  state.notificationsSeenAt = payload.seenAt;
+  updateNotificationsPill(payload.notifications, payload.seenAt);
+  if (state.view === "notifications") {
+    renderNotifications(payload.notifications);
+  }
+};
+
+const extractSpoilerText = (item) => {
+  const post = item.post || {};
+  const record = post.record || {};
+  const replyParent = item.reply?.parent;
+  const quoted = extractQuotedRecord(post.embed);
+  const texts = [
+    record.text,
+    replyParent?.record?.text,
+    quoted?.value?.text,
+  ].filter(Boolean);
+  return texts.join(" ");
 };
 
 const filterTimeline = (feed, hidePacers) => {
@@ -493,15 +1003,12 @@ const filterTimeline = (feed, hidePacers) => {
     }
     const parentAuthor = item.reply.parent.author;
     if (!parentAuthor) {
-      return true;
-    }
-    if (parentAuthor.handle && parentAuthor.handle === currentHandle) {
-      return true;
-    }
-    if (parentAuthor.viewer?.following === false) {
       return false;
     }
-    return true;
+    if (parentAuthor.handle && parentAuthor.handle === state.handle) {
+      return true;
+    }
+    return parentAuthor.viewer?.following === true;
   };
 
   if (!hidePacers) {
@@ -512,26 +1019,114 @@ const filterTimeline = (feed, hidePacers) => {
     if (!shouldIncludeReply(item)) {
       return false;
     }
-    const text = item.post?.record?.text || "";
+    const authorHandle = item.post?.author?.handle || "";
+    if (PACERS_BLOCKED_HANDLES.has(authorHandle)) {
+      return false;
+    }
+    const text = extractSpoilerText(item);
     return !containsPacersSpoiler(text);
   });
 };
 
 timeline.addEventListener("click", async (event) => {
+  const menuButton = event.target.closest(".post-menu");
+  const menuActionButton = event.target.closest("[data-menu-action]");
+  const quoteActionButton = event.target.closest("[data-quote-action]");
   const actionButton = event.target.closest(".post-action");
-  if (!actionButton) {
-    return;
-  }
-
-  const postElement = actionButton.closest(".post");
+  const postElement = event.target.closest(".post");
   if (!postElement) {
     return;
   }
 
   const uri = postElement.dataset.uri;
   const cid = postElement.dataset.cid;
+  const threadContainer = postElement.querySelector(".thread-expand");
+  const menuPanel = postElement.querySelector(".post-menu-panel");
+  const quoteComposer = postElement.querySelector(".quote-composer");
 
   try {
+    if (menuButton) {
+      document.querySelectorAll(".post-menu-panel.is-open").forEach((panel) => {
+        if (panel !== menuPanel) {
+          panel.classList.remove("is-open");
+        }
+      });
+      menuPanel?.classList.toggle("is-open");
+      return;
+    }
+
+    if (menuActionButton) {
+      const action = menuActionButton.dataset.menuAction;
+      if (action === "copy") {
+        const link = buildPostUrlFromUri(uri);
+        if (link) {
+          await navigator.clipboard.writeText(link);
+          setStatus("Post link copied!");
+        }
+      }
+
+      if (action === "quote") {
+        quoteComposer?.classList.add("is-visible");
+        const textarea = quoteComposer?.querySelector("textarea");
+        textarea?.focus();
+      }
+
+      if (action === "delete") {
+        const rkey = menuActionButton.closest(".post-menu-panel")?.dataset.rkey;
+        if (!rkey) {
+          setStatus("Unable to delete this post.");
+          return;
+        }
+        const confirmed = window.confirm("Delete this post?");
+        if (!confirmed) {
+          return;
+        }
+        await deleteRecord("app.bsky.feed.post", rkey);
+        setStatus("Deleted!");
+        await refreshTimeline();
+      }
+      menuPanel?.classList.remove("is-open");
+      return;
+    }
+
+    if (quoteActionButton) {
+      const action = quoteActionButton.dataset.quoteAction;
+      if (!quoteComposer) {
+        return;
+      }
+      if (action === "cancel") {
+        quoteComposer.classList.remove("is-visible");
+        quoteComposer.querySelector("textarea").value = "";
+        return;
+      }
+      if (action === "post") {
+        const quoteText = quoteComposer.querySelector("textarea").value.trim();
+        if (!quoteText) {
+          return;
+        }
+        await createRecord("app.bsky.feed.post", {
+          text: quoteText,
+          embed: {
+            $type: "app.bsky.embed.record",
+            record: {
+              uri,
+              cid,
+            },
+          },
+          createdAt: new Date().toISOString(),
+        });
+        quoteComposer.classList.remove("is-visible");
+        quoteComposer.querySelector("textarea").value = "";
+        setStatus("Quoted!");
+        await refreshTimeline();
+        return;
+      }
+    }
+
+    if (!actionButton) {
+      return;
+    }
+
     if (actionButton.dataset.action === "share") {
       if (uri) {
         await navigator.clipboard.writeText(uri);
@@ -545,6 +1140,11 @@ timeline.addEventListener("click", async (event) => {
         subject: { uri, cid },
         createdAt: new Date().toISOString(),
       });
+      actionButton.classList.add("is-active");
+      const count = actionButton.querySelector('.action-count[data-count="like"]');
+      if (count) {
+        count.textContent = Number(count.textContent || 0) + 1;
+      }
       setStatus("Liked!");
     }
 
@@ -553,6 +1153,11 @@ timeline.addEventListener("click", async (event) => {
         subject: { uri, cid },
         createdAt: new Date().toISOString(),
       });
+      actionButton.classList.add("is-active");
+      const count = actionButton.querySelector('.action-count[data-count="repost"]');
+      if (count) {
+        count.textContent = Number(count.textContent || 0) + 1;
+      }
       setStatus("Reposted!");
     }
 
@@ -569,7 +1174,27 @@ timeline.addEventListener("click", async (event) => {
         },
         createdAt: new Date().toISOString(),
       });
+      const count = actionButton.querySelector('.action-count[data-count="reply"]');
+      if (count) {
+        count.textContent = Number(count.textContent || 0) + 1;
+      }
       setStatus("Reply posted!");
+    }
+
+    if (actionButton.dataset.action === "thread") {
+      if (!uri || !threadContainer) {
+        return;
+      }
+      if (threadContainer.classList.contains("is-visible")) {
+        threadContainer.classList.remove("is-visible");
+        return;
+      }
+      threadContainer.innerHTML = "";
+      threadContainer.classList.add("is-visible");
+      const payload = await fetchThread(uri);
+      const root = payload.thread;
+      appendThreadNodes(threadContainer, root, 0, 3);
+      setStatus("Thread loaded");
     }
   } catch (error) {
     showError(error.message);
@@ -585,15 +1210,36 @@ composerForm?.addEventListener("submit", async (event) => {
   }
 
   try {
-    await createRecord("app.bsky.feed.post", {
+    const record = {
       text,
       createdAt: new Date().toISOString(),
-    });
+    };
+
+    if (state.composerImage) {
+      const blob = await uploadImage(state.composerImage);
+      record.embed = {
+        $type: "app.bsky.embed.images",
+        images: [
+          {
+            alt: "",
+            image: blob,
+          },
+        ],
+      };
+    }
+
+    await createRecord("app.bsky.feed.post", record);
     composerForm.reset();
+    state.composerImage = null;
+    if (photoInput) {
+      photoInput.value = "";
+    }
+    if (photoName) {
+      photoName.textContent = "";
+    }
     setStatus("Posted!");
-    const limit = Number(form.querySelector('input[name="limit"]').value) || 30;
-    const caughtUp = form.querySelector('input[name="caughtUp"][value="yes"]').checked;
-    await refreshTimeline(limit, !caughtUp);
+    state.limit = Number(form.querySelector('input[name="limit"]').value) || 30;
+    await refreshTimeline();
   } catch (error) {
     showError(error.message);
   }
@@ -608,7 +1254,6 @@ form.addEventListener("submit", async (event) => {
   const handle = formData.get("handle").trim();
   const appPassword = formData.get("appPassword").trim();
   const limit = Number(formData.get("limit")) || 30;
-  const caughtUp = formData.get("caughtUp") === "yes";
 
   if (!handle || !appPassword) {
     showError("Please enter your handle and app password.");
@@ -617,15 +1262,117 @@ form.addEventListener("submit", async (event) => {
   }
 
   try {
-    currentHandle = handle;
-    currentSession = await createSession(handle, appPassword);
-    currentToken = currentSession.accessJwt;
-    const feed = await fetchTimeline(currentToken, limit);
-    const filtered = filterTimeline(feed, !caughtUp);
+    state.handle = handle;
+    state.limit = limit;
+    state.session = await createSession(handle, appPassword);
+    state.token = state.session.accessJwt;
+    const profile = await fetchProfile(handle);
+    updateComposerAvatar(profile.avatar);
+    const feed = await fetchTimeline(state.token, limit);
+    state.feed = feed;
+    const filtered = filterTimeline(feed, state.hidePacers);
     renderPosts(filtered);
-    setStatus(caughtUp ? "Showing all posts" : "Spoilers hidden");
+    setStatus(state.hidePacers ? "Spoilers hidden" : "Showing all posts");
+    await refreshNotifications();
   } catch (error) {
     showError(error.message);
     setStatus("Sign-in error");
   }
+});
+
+pacersToggle?.addEventListener("click", () => {
+  state.hidePacers = !state.hidePacers;
+  localStorage.setItem(STORAGE_KEY, String(state.hidePacers));
+  updatePacersUI();
+  if (state.feed.length) {
+    const filtered = filterTimeline(state.feed, state.hidePacers);
+    renderPosts(filtered);
+  }
+  if (state.token) {
+    setStatus(state.hidePacers ? "Spoilers hidden" : "Showing all posts");
+  }
+});
+
+refreshButton?.addEventListener("click", async () => {
+  if (!state.token) {
+    setStatus("Waiting for sign-in");
+    return;
+  }
+  try {
+    setStatus("Refreshing...");
+    await refreshTimeline();
+    await refreshNotifications();
+    setStatus(state.hidePacers ? "Spoilers hidden" : "Showing all posts");
+  } catch (error) {
+    showError(error.message);
+    setStatus("Refresh error");
+  }
+});
+
+tabTimeline?.addEventListener("click", () => {
+  state.view = "timeline";
+  tabTimeline.classList.add("is-active");
+  tabNotifications.classList.remove("is-active");
+  document.querySelector(".composer")?.classList.remove("is-hidden");
+  document.querySelector(".timeline")?.classList.remove("is-hidden");
+  notificationsSection?.classList.remove("is-visible");
+});
+
+tabNotifications?.addEventListener("click", async () => {
+  state.view = "notifications";
+  tabNotifications.classList.add("is-active");
+  tabTimeline.classList.remove("is-active");
+  document.querySelector(".composer")?.classList.add("is-hidden");
+  document.querySelector(".timeline")?.classList.add("is-hidden");
+  notificationsSection?.classList.add("is-visible");
+  if (state.notifications.length === 0) {
+    try {
+      await refreshNotifications();
+    } catch (error) {
+      showNotificationError(error.message);
+    }
+  } else {
+    renderNotifications(state.notifications);
+  }
+});
+
+markReadButton?.addEventListener("click", async () => {
+  try {
+    const seenAt = new Date().toISOString();
+    await updateNotificationsSeen();
+    state.notifications = state.notifications.map((item) => ({
+      ...item,
+      isRead: true,
+    }));
+    state.notificationsSeenAt = seenAt;
+    updateNotificationsPill(state.notifications, seenAt);
+    renderNotifications(state.notifications);
+    setStatus("Notifications marked as read");
+  } catch (error) {
+    showError(error.message);
+  }
+});
+
+updatePacersUI();
+updateComposerAvatar();
+
+photoButton?.addEventListener("click", () => {
+  photoInput?.click();
+});
+
+photoInput?.addEventListener("change", () => {
+  const [file] = photoInput.files || [];
+  state.composerImage = file || null;
+  if (photoName) {
+    photoName.textContent = file ? file.name : "";
+  }
+});
+
+document.addEventListener("click", (event) => {
+  if (event.target.closest(".post-menu") || event.target.closest(".post-menu-panel")) {
+    return;
+  }
+  document.querySelectorAll(".post-menu-panel.is-open").forEach((panel) => {
+    panel.classList.remove("is-open");
+  });
 });
