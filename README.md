@@ -15,6 +15,14 @@ Indiana Pacers spoilers unless you confirm you're caught up.
 3. Enter your Bluesky handle + app password and load the timeline.
 4. Toggle the Pacers Shield in the header to hide/show spoilers anytime.
 
+## GitHub Pages
+
+You can host this as a static site via GitHub Pages:
+
+1. Go to the repo Settings → Pages.
+2. Source: "Deploy from a branch" → Branch: `main` → Folder: `/ (root)`.
+3. Visit `https://seanbartz.github.io/BoomSky/`.
+
 ## Notes
 
 - Use a Bluesky app password from your account settings.
