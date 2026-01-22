@@ -31,6 +31,11 @@ body {
   overflow-x: hidden;
 }
 
+html,
+body {
+  width: 100%;
+}
+
 body::before,
 body::after {
   content: "";
@@ -920,13 +925,13 @@ button {
 }
 
 @media (max-width: 860px) {
+  html {
+    font-size: 18px;
+  }
+
   .topbar {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  body {
-    font-size: 18px;
   }
 
   .layout {
@@ -935,6 +940,7 @@ button {
 
   .app-shell {
     max-width: 100%;
+    width: 100%;
     padding: 16px 16px 64px;
   }
 
@@ -958,6 +964,10 @@ button {
 
   .field input,
   .field textarea {
+    font-size: 1.1rem;
+  }
+
+  .post-text {
     font-size: 1.05rem;
   }
 
@@ -971,5 +981,19 @@ button {
 
   .post-actions {
     flex-wrap: wrap;
+  }
+}
+
+@media (pointer: coarse) {
+  html {
+    font-size: 18px;
+  }
+
+  .app-shell {
+    width: 100%;
+  }
+
+  .post-action {
+    font-size: 0.95rem;
   }
 }
