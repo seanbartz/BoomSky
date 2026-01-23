@@ -1001,6 +1001,10 @@ const filterTimeline = (feed, hidePacers) => {
     if (!item.reply?.parent) {
       return true;
     }
+    const reason = item.reason;
+    if (reason?.$type?.includes("reasonRepost") && reason.by?.viewer?.following) {
+      return true;
+    }
     const parentAuthor = item.reply.parent.author;
     if (!parentAuthor) {
       return false;
