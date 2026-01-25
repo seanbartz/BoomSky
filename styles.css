@@ -34,7 +34,7 @@ body {
 html,
 body {
   width: 100%;
-  text-size-adjust: 110%;
+  text-size-adjust: 125%;
 }
 
 body::before,
@@ -927,7 +927,7 @@ button {
 
 @media (max-width: 860px) {
   html {
-    font-size: 20px;
+    font-size: 22px;
   }
 
   .topbar {
@@ -965,15 +965,15 @@ button {
 
   .field input,
   .field textarea {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
   }
 
   .post-text {
-    font-size: 1.15rem;
+    font-size: 1.2rem;
   }
 
   .post-action {
-    font-size: 1rem;
+    font-size: 1.05rem;
   }
 
   .link-card {
@@ -987,7 +987,7 @@ button {
 
 @media (pointer: coarse) {
   html {
-    font-size: 20px;
+    font-size: 22px;
   }
 
   .app-shell {
@@ -995,13 +995,13 @@ button {
   }
 
   .post-action {
-    font-size: 1rem;
+    font-size: 1.05rem;
   }
 }
 
 @media (max-width: 430px) {
   html {
-    font-size: 22px;
+    font-size: 24px;
   }
 
   .app-shell {
@@ -1009,6 +1009,6 @@ button {
   }
 
   .post-action {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
   }
 }
