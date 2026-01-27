@@ -1131,14 +1131,6 @@ timeline.addEventListener("click", async (event) => {
       return;
     }
 
-    if (actionButton.dataset.action === "share") {
-      if (uri) {
-        await navigator.clipboard.writeText(uri);
-        setStatus("Post link copied!");
-      }
-      return;
-    }
-
     if (actionButton.dataset.action === "like") {
       await createRecord("app.bsky.feed.like", {
         subject: { uri, cid },
