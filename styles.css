@@ -626,7 +626,7 @@ button {
 
 .thread-text {
   margin-top: 6px;
-  font-size: 0.9rem;
+  font-size: 1rem;
   line-height: 1.4;
   white-space: pre-wrap;
 }
@@ -749,7 +749,7 @@ button {
 }
 
 .quote-text {
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: var(--ink);
 }
 
