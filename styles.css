@@ -942,7 +942,7 @@ button {
   .app-shell {
     max-width: 100%;
     width: 100%;
-    padding: 16px 16px 64px;
+    padding: 16px 8px 64px;
   }
 
   .top-actions {
@@ -1005,7 +1005,7 @@ button {
   }
 
   .app-shell {
-    padding: 14px 14px 56px;
+    padding: 14px 6px 56px;
   }
 
   .post-action {
