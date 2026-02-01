@@ -1481,23 +1481,23 @@ pacersToggle?.addEventListener("click", () => {
     const filtered = filterTimeline(state.feed, state.hidePacers);
     renderPosts(filtered);
   }
-  if (state.token) {
+  if (state.token || state.isDemoMode) {
     const prefix = state.isDemoMode ? "Demo: " : "";
     setStatus(state.hidePacers ? `${prefix}Spoilers hidden` : `${prefix}Showing all posts`);
   }
 });
 
 refreshButton?.addEventListener("click", async () => {
-  if (!state.token) {
-    setStatus("Waiting for sign-in");
-    return;
-  }
-  
   if (state.isDemoMode) {
     setStatus("Refreshing demo...");
     const filtered = filterTimeline(state.feed, state.hidePacers);
     renderPosts(filtered);
     setStatus(state.hidePacers ? "Demo: Spoilers hidden" : "Demo: Showing all posts");
+    return;
+  }
+  
+  if (!state.token) {
+    setStatus("Waiting for sign-in");
     return;
   }
   
@@ -1563,7 +1563,7 @@ demoButton?.addEventListener("click", () => {
   state.isDemoMode = true;
   state.handle = "demo.user.bsky.social";
   state.feed = SAMPLE_POSTS;
-  state.token = "demo-token";
+  // Don't set a fake token - rely on isDemoMode flag instead
   
   const filtered = filterTimeline(SAMPLE_POSTS, state.hidePacers);
   renderPosts(filtered);
