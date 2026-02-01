@@ -37,6 +37,200 @@ const DEFAULT_AVATAR = `data:image/svg+xml;utf8,${encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#dbe2f8"/><path d="M40 42c8.8 0 16-7.2 16-16S48.8 10 40 10s-16 7.2-16 16 7.2 16 16 16zm0 8c-13.3 0-24 10.7-24 24h48c0-13.3-10.7-24-24-24z" fill="#8aa0d6"/></svg>',
 )}`;
 
+// Sample data for demo mode
+const SAMPLE_POSTS = [
+  {
+    post: {
+      uri: "at://demo.user1.bsky.social/app.bsky.feed.post/1",
+      cid: "demo1",
+      author: {
+        did: "did:plc:demo1",
+        handle: "basketballfan.bsky.social",
+        displayName: "Basketball Fan",
+        avatar: DEFAULT_AVATAR,
+      },
+      record: {
+        text: "Just watched an amazing game! The Pacers with a huge win tonight! Haliburton was incredible with 25 points and 12 assists! 🏀🔥",
+        createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+      },
+      replyCount: 5,
+      repostCount: 12,
+      likeCount: 28,
+    },
+  },
+  {
+    post: {
+      uri: "at://demo.user2.bsky.social/app.bsky.feed.post/2",
+      cid: "demo2",
+      author: {
+        did: "did:plc:demo2",
+        handle: "techwriter.bsky.social",
+        displayName: "Tech Writer",
+        avatar: DEFAULT_AVATAR,
+      },
+      record: {
+        text: "Working on a new blog post about web performance optimization. Really excited about the results I'm seeing with lazy loading! 📝",
+        createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+      },
+      replyCount: 3,
+      repostCount: 7,
+      likeCount: 15,
+    },
+  },
+  {
+    post: {
+      uri: "at://demo.user3.bsky.social/app.bsky.feed.post/3",
+      cid: "demo3",
+      author: {
+        did: "did:plc:demo3",
+        handle: "sportsnews.bsky.social",
+        displayName: "Sports News",
+        avatar: DEFAULT_AVATAR,
+      },
+      record: {
+        text: "BREAKING: Pacers announce Pascal Siakam extension! Big news for Indiana fans. The team is building something special. 🏀💙💛",
+        createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+      },
+      replyCount: 18,
+      repostCount: 45,
+      likeCount: 89,
+    },
+  },
+  {
+    post: {
+      uri: "at://demo.user4.bsky.social/app.bsky.feed.post/4",
+      cid: "demo4",
+      author: {
+        did: "did:plc:demo4",
+        handle: "foodie.bsky.social",
+        displayName: "Food Explorer",
+        avatar: DEFAULT_AVATAR,
+      },
+      record: {
+        text: "Best pizza I've had in months! This local spot has incredible sourdough crust. Highly recommend if you're in the area 🍕",
+        createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+      },
+      replyCount: 2,
+      repostCount: 4,
+      likeCount: 11,
+    },
+  },
+  {
+    post: {
+      uri: "at://demo.user5.bsky.social/app.bsky.feed.post/5",
+      cid: "demo5",
+      author: {
+        did: "did:plc:demo5",
+        handle: "tonyreast.bsky.social",
+        displayName: "Tony R East",
+        avatar: DEFAULT_AVATAR,
+      },
+      record: {
+        text: "Great practice today. The energy is high and everyone is locked in. Looking forward to Friday's game at Gainbridge Fieldhouse! #Pacers",
+        createdAt: new Date(Date.now() - 1000 * 60 * 75).toISOString(),
+      },
+      replyCount: 8,
+      repostCount: 21,
+      likeCount: 52,
+    },
+  },
+  {
+    post: {
+      uri: "at://demo.user6.bsky.social/app.bsky.feed.post/6",
+      cid: "demo6",
+      author: {
+        did: "did:plc:demo6",
+        handle: "photographer.bsky.social",
+        displayName: "Street Photographer",
+        avatar: DEFAULT_AVATAR,
+      },
+      record: {
+        text: "Golden hour in the city. The light was perfect today 📸✨",
+        createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
+      },
+      replyCount: 1,
+      repostCount: 3,
+      likeCount: 19,
+    },
+  },
+  {
+    post: {
+      uri: "at://demo.user7.bsky.social/app.bsky.feed.post/7",
+      cid: "demo7",
+      author: {
+        did: "did:plc:demo7",
+        handle: "musiclover.bsky.social",
+        displayName: "Music Enthusiast",
+        avatar: DEFAULT_AVATAR,
+      },
+      record: {
+        text: "The new album dropped and it's everything I hoped for. Been on repeat all morning 🎵🎧",
+        createdAt: new Date(Date.now() - 1000 * 60 * 105).toISOString(),
+      },
+      replyCount: 4,
+      repostCount: 6,
+      likeCount: 23,
+    },
+  },
+  {
+    post: {
+      uri: "at://demo.user8.bsky.social/app.bsky.feed.post/8",
+      cid: "demo8",
+      author: {
+        did: "did:plc:demo8",
+        handle: "gamefan.bsky.social",
+        displayName: "Game Fan",
+        avatar: DEFAULT_AVATAR,
+      },
+      record: {
+        text: "Turner with the block! Bennedict Mathurin driving to the basket! What a play by the Indiana Pacers! This team is fun to watch! 🏀",
+        createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+      },
+      replyCount: 11,
+      repostCount: 19,
+      likeCount: 41,
+    },
+  },
+  {
+    post: {
+      uri: "at://demo.user9.bsky.social/app.bsky.feed.post/9",
+      cid: "demo9",
+      author: {
+        did: "did:plc:demo9",
+        handle: "developer.bsky.social",
+        displayName: "Web Developer",
+        avatar: DEFAULT_AVATAR,
+      },
+      record: {
+        text: "Just deployed a new feature using vanilla JavaScript. Sometimes you don't need a framework! Keep it simple. 💻",
+        createdAt: new Date(Date.now() - 1000 * 60 * 135).toISOString(),
+      },
+      replyCount: 6,
+      repostCount: 9,
+      likeCount: 34,
+    },
+  },
+  {
+    post: {
+      uri: "at://demo.user10.bsky.social/app.bsky.feed.post/10",
+      cid: "demo10",
+      author: {
+        did: "did:plc:demo10",
+        handle: "artist.bsky.social",
+        displayName: "Digital Artist",
+        avatar: DEFAULT_AVATAR,
+      },
+      record: {
+        text: "Finished a new illustration today! Really happy with how the colors turned out 🎨",
+        createdAt: new Date(Date.now() - 1000 * 60 * 150).toISOString(),
+      },
+      replyCount: 2,
+      repostCount: 5,
+      likeCount: 27,
+    },
+  },
+];
+
 const form = document.getElementById("credentials-form");
 const timeline = document.getElementById("timeline");
 const statusPill = document.getElementById("status-pill");
@@ -57,6 +251,8 @@ const photoButton = document.getElementById("photo-button");
 const photoName = document.getElementById("photo-name");
 const pacersStatus = document.getElementById("pacers-status");
 const favicon = document.getElementById("favicon");
+const demoButton = document.getElementById("demo-button");
+const demoIndicator = document.getElementById("demo-indicator");
 
 const state = {
   handle: "excitedstate.bsky.social",
@@ -69,6 +265,7 @@ const state = {
   view: "timeline",
   notificationsSeenAt: null,
   composerImage: null,
+  isDemoMode: false,
 };
 
 const storedHide = localStorage.getItem(STORAGE_KEY);
@@ -1285,7 +1482,8 @@ pacersToggle?.addEventListener("click", () => {
     renderPosts(filtered);
   }
   if (state.token) {
-    setStatus(state.hidePacers ? "Spoilers hidden" : "Showing all posts");
+    const prefix = state.isDemoMode ? "Demo: " : "";
+    setStatus(state.hidePacers ? `${prefix}Spoilers hidden` : `${prefix}Showing all posts`);
   }
 });
 
@@ -1294,6 +1492,15 @@ refreshButton?.addEventListener("click", async () => {
     setStatus("Waiting for sign-in");
     return;
   }
+  
+  if (state.isDemoMode) {
+    setStatus("Refreshing demo...");
+    const filtered = filterTimeline(state.feed, state.hidePacers);
+    renderPosts(filtered);
+    setStatus(state.hidePacers ? "Demo: Spoilers hidden" : "Demo: Showing all posts");
+    return;
+  }
+  
   try {
     setStatus("Refreshing...");
     await refreshTimeline();
@@ -1351,6 +1558,23 @@ markReadButton?.addEventListener("click", async () => {
 
 updatePacersUI();
 updateComposerAvatar();
+
+demoButton?.addEventListener("click", () => {
+  state.isDemoMode = true;
+  state.handle = "demo.user.bsky.social";
+  state.feed = SAMPLE_POSTS;
+  state.token = "demo-token";
+  
+  const filtered = filterTimeline(SAMPLE_POSTS, state.hidePacers);
+  renderPosts(filtered);
+  setStatus(state.hidePacers ? "Demo: Spoilers hidden" : "Demo: Showing all posts");
+  
+  if (demoIndicator) {
+    demoIndicator.classList.remove("is-hidden");
+  }
+  
+  updateComposerAvatar(DEFAULT_AVATAR);
+});
 
 photoButton?.addEventListener("click", () => {
   photoInput?.click();
