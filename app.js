@@ -32,6 +32,7 @@ const PACERS_KEYWORDS = [
 const PACERS_BLOCKED_HANDLES = new Set([
   "tonyreast.bsky.social",
   "ipacers.bsky.social",
+  "caitlinmaycooper.bsky.social",
 ]);
 const DEFAULT_AVATAR = `data:image/svg+xml;utf8,${encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#dbe2f8"/><path d="M40 42c8.8 0 16-7.2 16-16S48.8 10 40 10s-16 7.2-16 16 7.2 16 16 16zm0 8c-13.3 0-24 10.7-24 24h48c0-13.3-10.7-24-24-24z" fill="#8aa0d6"/></svg>',
