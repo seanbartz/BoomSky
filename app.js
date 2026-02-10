@@ -70,6 +70,7 @@ const state = {
   view: "timeline",
   notificationsSeenAt: null,
   composerImage: null,
+  additionalKeywords: [],
 };
 
 const storedHide = localStorage.getItem(STORAGE_KEY);
@@ -103,7 +104,8 @@ const showNotificationError = (message) => {
 
 const containsPacersSpoiler = (text) => {
   const lowered = text.toLowerCase();
-  return PACERS_KEYWORDS.some((keyword) => lowered.includes(keyword));
+  const allKeywords = [...PACERS_KEYWORDS, ...state.additionalKeywords];
+  return allKeywords.some((keyword) => lowered.includes(keyword));
 };
 
 const updatePacersUI = () => {
@@ -1251,6 +1253,13 @@ form.addEventListener("submit", async (event) => {
   const handle = formData.get("handle").trim();
   const appPassword = formData.get("appPassword").trim();
   const limit = Number(formData.get("limit")) || 30;
+  const additionalKeywordsInput = formData.get("additionalKeywords")?.trim() || "";
+  
+  // Parse comma-separated keywords and convert to lowercase
+  state.additionalKeywords = additionalKeywordsInput
+    .split(",")
+    .map((kw) => kw.trim().toLowerCase())
+    .filter((kw) => kw);
 
   if (!handle || !appPassword) {
     showError("Please enter your handle and app password.");
