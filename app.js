@@ -1257,8 +1257,9 @@ form.addEventListener("submit", async (event) => {
   
   // Parse comma-separated keywords and convert to lowercase
   state.additionalKeywords = additionalKeywordsInput
-    ? additionalKeywordsInput.split(",").map((kw) => kw.trim().toLowerCase()).filter((kw) => kw)
-    : [];
+    .split(",")
+    .map((kw) => kw.trim().toLowerCase())
+    .filter((kw) => kw);
 
   if (!handle || !appPassword) {
     showError("Please enter your handle and app password.");
