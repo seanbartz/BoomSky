@@ -1,5 +1,6 @@
 const API_BASE = "https://bsky.social/xrpc";
 const STORAGE_KEY = "boomsky-hide-pacers";
+const MAX_TIMELINE_BATCH_SIZE = 100; // Bluesky API maximum for getTimeline
 const PACERS_KEYWORDS = [
   "pacers",
   "indiana pacers",
@@ -717,8 +718,11 @@ const createSession = async (handle, appPassword) => {
   return payload;
 };
 
-const fetchTimeline = async (token, limit) => {
-  const response = await fetch(`${API_BASE}/app.bsky.feed.getTimeline?limit=${limit}`, {
+const fetchTimeline = async (token, limit, cursor) => {
+  const url = cursor
+    ? `${API_BASE}/app.bsky.feed.getTimeline?limit=${limit}&cursor=${encodeURIComponent(cursor)}`
+    : `${API_BASE}/app.bsky.feed.getTimeline?limit=${limit}`;
+  const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -729,7 +733,24 @@ const fetchTimeline = async (token, limit) => {
   }
 
   const payload = await response.json();
-  return payload.feed || [];
+  return { feed: payload.feed || [], cursor: payload.cursor };
+};
+
+const fetchFilteredTimeline = async (token, limit) => {
+  const rawFeed = [];
+  let cursor;
+  let filteredCount = 0;
+  const batchSize = Math.min(limit * 2, MAX_TIMELINE_BATCH_SIZE);
+  while (true) {
+    const { feed, cursor: nextCursor } = await fetchTimeline(token, batchSize, cursor);
+    rawFeed.push(...feed);
+    filteredCount += filterTimeline(feed, state.hidePacers).length;
+    if (filteredCount >= limit || !nextCursor || feed.length === 0) {
+      break;
+    }
+    cursor = nextCursor;
+  }
+  return rawFeed;
 };
 
 const uploadImage = async (file) => {
@@ -859,10 +880,10 @@ const refreshTimeline = async () => {
   if (!state.token) {
     return;
   }
-  const feed = await fetchTimeline(state.token, state.limit);
-  state.feed = feed;
-  const filtered = filterTimeline(feed, state.hidePacers);
-  renderPosts(filtered);
+  const raw = await fetchFilteredTimeline(state.token, state.limit);
+  state.feed = raw;
+  const filtered = filterTimeline(raw, state.hidePacers);
+  renderPosts(filtered.slice(0, state.limit));
 };
 
 const updateNotificationsPill = (notifications, seenAt) => {
@@ -1274,10 +1295,10 @@ form.addEventListener("submit", async (event) => {
     state.token = state.session.accessJwt;
     const profile = await fetchProfile(handle);
     updateComposerAvatar(profile.avatar);
-    const feed = await fetchTimeline(state.token, limit);
-    state.feed = feed;
-    const filtered = filterTimeline(feed, state.hidePacers);
-    renderPosts(filtered);
+    const raw = await fetchFilteredTimeline(state.token, limit);
+    state.feed = raw;
+    const filtered = filterTimeline(raw, state.hidePacers);
+    renderPosts(filtered.slice(0, limit));
     setStatus(state.hidePacers ? "Spoilers hidden" : "Showing all posts");
     await refreshNotifications();
   } catch (error) {
